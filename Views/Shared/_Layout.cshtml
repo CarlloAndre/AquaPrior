@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] – AquaPrior</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header>
+    <div class="wrap bar">
+        <a class="logo" asp-controller="Home" asp-action="Index">Aqua<span>Prior</span></a>
+        <nav aria-label="Principal">
+            <a asp-controller="Home" asp-action="Index">Zonas afectadas</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Reportes" asp-action="Crear">Reportar</a>
+                <a asp-controller="Reportes" asp-action="Mis">Mis reportes</a>
+                if (User.IsInRole("Administrador"))
+                {
+                    <a asp-controller="Reportes" asp-action="Index">Reportes</a>
+                    <a asp-controller="Zonas" asp-action="Index">Distritos</a>
+                    <a asp-controller="Usuarios" asp-action="Index">Usuarios</a>
+                    <a asp-controller="Admin" asp-action="Prioridad">Prioridad</a>
+                    <a asp-controller="Admin" asp-action="Estadisticas">Estadísticas</a>
+                }
+                <span class="who">@User.Identity.Name · @(User.IsInRole("Administrador") ? "Administrador" : "Ciudadano")</span>
+                <form asp-controller="Cuenta" asp-action="Salir" method="post" class="inline">
+                    <button type="submit" class="linkbtn">Salir</button>
+                </form>
+            }
+            else
+            {
+                <a asp-controller="Cuenta" asp-action="Login">Iniciar sesión</a>
+                <a asp-controller="Cuenta" asp-action="Registro">Registrarse</a>
+            }
+        </nav>
+    </div>
+</header>
+<main class="wrap">
+    @if (TempData["Mensaje"] is string mensaje)
+    {
+        <p class="msg" role="status">@mensaje</p>
+    }
+    @RenderBody()
+</main>
+<footer>
+    <div class="wrap">Proyecto final de Diseño y Arquitectura de Software · Ingeniería de Sistemas Computacionales, Trujillo 2026-2. La prioridad es referencial y no reemplaza las decisiones de las entidades responsables.</div>
+</footer>
+</body>
+</html>

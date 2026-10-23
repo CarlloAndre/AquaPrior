@@ -1,0 +1,14 @@
+@model UsuarioVM
+@{ ViewData["Title"] = "Nuevo usuario"; }
+<section class="v">
+    <h1>Nuevo usuario</h1>
+    <form class="card" asp-action="Crear" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="err"></div>
+        <label>Nombre<input asp-for="Nombre" /><span asp-validation-for="Nombre" class="err"></span></label>
+        <label>Correo<input asp-for="Correo" /><span asp-validation-for="Correo" class="err"></span></label>
+        <label>Rol<select asp-for="Rol" asp-items="Html.GetEnumSelectList<Rol>()"></select></label>
+        <label>Contraseña (mínimo 8 caracteres)<input asp-for="Clave" autocomplete="new-password" /><span asp-validation-for="Clave" class="err"></span></label>
+        <button class="btn" type="submit">Guardar</button>
+        <a class="sm" asp-action="Index">Cancelar</a>
+    </form>
+</section>

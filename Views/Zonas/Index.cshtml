@@ -1,0 +1,28 @@
+@model List<Zona>
+@{ ViewData["Title"] = "Distritos"; }
+<section class="v">
+    <h1>Distritos</h1>
+    <p class="lead">Mantenimiento de los distritos. Abre uno para ver sus reportes (maestro-detalle).</p>
+    <p><a class="btn" asp-action="Crear">Nuevo distrito</a></p>
+    @if (Model.Any())
+    {
+        <ul class="list">
+            @foreach (var z in Model)
+            {
+                <li class="it">
+                    <div></div>
+                    <div><b>@z.Nombre</b><div class="mt">@z.Reportes.Count reporte@(z.Reportes.Count == 1 ? "" : "s")</div></div>
+                    <div class="act">
+                        <a class="sm" asp-action="Detalle" asp-route-id="@z.Id">Ver reportes</a>
+                        <a class="sm" asp-action="Editar" asp-route-id="@z.Id">Editar</a>
+                        <a class="sm" asp-action="Eliminar" asp-route-id="@z.Id">Eliminar</a>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">No hay distritos registrados.</div>
+    }
+</section>

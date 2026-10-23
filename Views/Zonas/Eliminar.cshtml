@@ -1,0 +1,15 @@
+@model Zona
+@{ ViewData["Title"] = "Eliminar distrito"; }
+<section class="v">
+    <h1>Eliminar distrito</h1>
+    <p class="lead">Esta acción no se puede deshacer. Un distrito con reportes no se puede eliminar.</p>
+    <div class="card">
+        <p><b>@Model.Nombre</b></p>
+        <p class="mt">@Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s") asociado@(Model.Reportes.Count == 1 ? "" : "s")</p>
+        <form asp-action="Eliminar" method="post" class="inline">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn danger">Sí, eliminar</button>
+            <a class="sm" asp-action="Index">Cancelar</a>
+        </form>
+    </div>
+</section>

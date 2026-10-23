@@ -1,0 +1,21 @@
+@model RegistroVM
+@{ ViewData["Title"] = "Crear cuenta"; }
+<section class="v">
+    <h1>Crear cuenta de ciudadano</h1>
+    <p class="lead">Solo pedimos los datos necesarios para registrar tus reportes.</p>
+    <form class="card" asp-action="Registro" method="post" novalidate>
+        <label>Nombre
+            <input asp-for="Nombre" autocomplete="name" />
+            <span asp-validation-for="Nombre" class="err"></span>
+        </label>
+        <label>Correo
+            <input asp-for="Correo" autocomplete="email" />
+            <span asp-validation-for="Correo" class="err"></span>
+        </label>
+        <label>Contraseña (mínimo 8 caracteres)
+            <input asp-for="Clave" autocomplete="new-password" />
+            <span asp-validation-for="Clave" class="err"></span>
+        </label>
+        <button class="btn" type="submit">Crear cuenta</button>
+    </form>
+</section>

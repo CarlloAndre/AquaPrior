@@ -1,0 +1,16 @@
+@model Reporte
+@{ ViewData["Title"] = "Eliminar reporte"; }
+<section class="v">
+    <h1>Eliminar reporte</h1>
+    <p class="lead">Esta acción no se puede deshacer. ¿Seguro que quieres eliminar este reporte?</p>
+    <div class="card">
+        <p><b>@Model.Zona.Nombre</b> · @Model.Direccion <span class="badge">@Model.Estado</span></p>
+        <p class="mt">Registrado por @Model.Usuario.Nombre · @Formato.Horas(Model.HorasSinServicio) sin servicio</p>
+        <form asp-action="Eliminar" method="post" class="inline">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] as string)" />
+            <button type="submit" class="btn danger">Sí, eliminar</button>
+            <a class="sm" href="@(!string.IsNullOrEmpty(ViewData["ReturnUrl"] as string) ? (ViewData["ReturnUrl"] as string) : (User.IsInRole("Administrador") ? Url.Action("Index", "Reportes") : Url.Action("Mis", "Reportes")))">Cancelar</a>
+        </form>
+    </div>
+</section>

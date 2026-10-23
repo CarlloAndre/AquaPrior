@@ -1,0 +1,14 @@
+@model ZonaVM
+@{ ViewData["Title"] = "Editar distrito"; }
+<section class="v">
+    <h1>Editar distrito</h1>
+    <form class="card" asp-action="Editar" method="post" novalidate>
+        <input asp-for="Id" type="hidden" />
+        <label>Nombre
+            <input asp-for="Nombre" maxlength="80" />
+            <span asp-validation-for="Nombre" class="err"></span>
+        </label>
+        <button class="btn" type="submit">Guardar cambios</button>
+        <a class="sm" asp-action="Index">Cancelar</a>
+    </form>
+</section>

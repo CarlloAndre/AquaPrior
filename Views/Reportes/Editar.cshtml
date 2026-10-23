@@ -1,0 +1,10 @@
+@model ReporteVM
+@{ ViewData["Title"] = "Editar reporte"; }
+<section class="v">
+    <h1>Editar reporte</h1>
+    <p class="lead">Corrige los datos del reporte. El estado de revisión no cambia al editar.</p>
+    <form class="card" asp-action="Editar" method="post" novalidate>
+        <partial name="_CamposReporte" model="Model" />
+        <button class="btn" type="submit">Guardar cambios</button>
+    </form>
+</section>

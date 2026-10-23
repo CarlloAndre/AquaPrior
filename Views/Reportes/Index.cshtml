@@ -1,0 +1,45 @@
+@model List<ReporteFilaVM>
+@{ ViewData["Title"] = "Reportes"; }
+<section class="v">
+    <h1>Reportes</h1>
+    <p class="lead">Revisa cada reporte y define su estado. Solo los verificados entran en la priorización.</p>
+    <p><a class="btn" asp-action="Crear">Nuevo reporte</a></p>
+    @if (Model.Any())
+    {
+        <ul class="list">
+            @foreach (var f in Model)
+            {
+                var r = f.Reporte;
+                <li class="it">
+                    <div></div>
+                    <div>
+                        <b>@r.Zona.Nombre</b> · @r.Direccion
+                        @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
+                        <div class="mt">
+                            @r.Usuario.Nombre · @Formato.Horas(r.HorasSinServicio) sin servicio ·
+                            @(r.PersonasAfectadas is int p ? $"{p} personas" : "sin estimado de personas")
+                        </div>
+                    </div>
+                    <div class="act">
+                        <form asp-action="CambiarEstado" method="post" class="inline">
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <select name="estado" aria-label="Estado del reporte @r.Id">
+                                @foreach (var e in Enum.GetValues<EstadoReporte>())
+                                {
+                                    <option value="@e" selected="@(e == r.Estado)">@e</option>
+                                }
+                            </select>
+                            <button type="submit" class="sm">Guardar</button>
+                        </form>
+                        <a class="sm" asp-action="Editar" asp-route-id="@r.Id">Editar</a>
+                        <a class="sm" asp-action="Eliminar" asp-route-id="@r.Id">Eliminar</a>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">No hay reportes registrados.</div>
+    }
+</section>

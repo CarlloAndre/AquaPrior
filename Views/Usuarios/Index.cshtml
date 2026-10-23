@@ -1,0 +1,23 @@
+@model List<Usuario>
+@{ ViewData["Title"] = "Usuarios"; }
+<section class="v">
+    <h1>Usuarios</h1>
+    <p class="lead">Mantenimiento de cuentas de ciudadanos y administradores.</p>
+    <p><a class="btn" asp-action="Crear">Nuevo usuario</a></p>
+    <ul class="list">
+        @foreach (var u in Model)
+        {
+            <li class="it">
+                <div></div>
+                <div>
+                    <b>@u.Nombre</b> <span class="badge">@u.Rol</span>
+                    <div class="mt">@u.Correo · @u.Reportes.Count reporte@(u.Reportes.Count == 1 ? "" : "s")</div>
+                </div>
+                <div class="act">
+                    <a class="sm" asp-action="Editar" asp-route-id="@u.Id">Editar</a>
+                    <a class="sm" asp-action="Eliminar" asp-route-id="@u.Id">Eliminar</a>
+                </div>
+            </li>
+        }
+    </ul>
+</section>

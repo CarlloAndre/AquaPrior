@@ -1,0 +1,20 @@
+@model ReporteVM
+<div asp-validation-summary="ModelOnly" class="err"></div>
+<input asp-for="Id" type="hidden" />
+<input asp-for="ReturnUrl" type="hidden" />
+<label>Distrito
+    <select asp-for="ZonaId" asp-items="Model.Zonas"><option value="">Elige un distrito</option></select>
+    <span asp-validation-for="ZonaId" class="err"></span>
+</label>
+<label>Dirección o referencia
+    <input asp-for="Direccion" maxlength="80" placeholder="Ej. Mz. B, Urb. Los Jardines" />
+    <span asp-validation-for="Direccion" class="err"></span>
+</label>
+<label>Inicio del corte
+    <input asp-for="InicioCorte" type="datetime-local" />
+    <span asp-validation-for="InicioCorte" class="err"></span>
+</label>
+<label>Personas afectadas (si lo sabes)
+    <input asp-for="PersonasAfectadas" type="number" min="1" placeholder="Estimado" />
+    <span asp-validation-for="PersonasAfectadas" class="err"></span>
+</label>

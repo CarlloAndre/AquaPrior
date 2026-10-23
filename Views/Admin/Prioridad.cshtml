@@ -1,0 +1,40 @@
+@using AquaPrior.Services
+@model PrioridadVM
+@{ ViewData["Title"] = "Priorización de zonas"; }
+<section class="v">
+    <h1>Priorización de zonas</h1>
+    <p class="lead">Se consolidan los reportes verificados por distrito. Los pesos y umbrales son provisionales hasta que el equipo los acuerde.</p>
+    <form class="ctl" asp-action="Prioridad" method="get">
+        <label>Regla de cálculo
+            <select name="clave">
+                @foreach (var e in Model.Estrategias)
+                {
+                    <option value="@e.Clave" selected="@(e.Clave == Model.Clave)">@e.Nombre</option>
+                }
+            </select>
+        </label>
+        <label>Peso de personas (%), el resto es duración
+            <input type="number" name="peso" min="0" max="100" step="5" value="@Model.PesoPersonas" />
+        </label>
+        <button class="btn" type="submit">Recalcular</button>
+    </form>
+    <p class="hint">Puntaje = peso₁ × (personas ÷ máximo) + peso₂ × (horas ÷ máximo). Alta desde @((int)(PrioridadService.UmbralAlta * 100)), media desde @((int)(PrioridadService.UmbralMedia * 100)).</p>
+
+    @if (Model.Resultado.Ranking.Any())
+    {
+        <ul class="list">
+            @foreach (var z in Model.Resultado.Ranking)
+            {
+                <partial name="_ZonaItem" model="z" />
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">No hay zonas con datos suficientes. Verifica reportes primero.</div>
+    }
+    @if (Model.Resultado.SinDatos.Any())
+    {
+        <p class="hint">Datos insuficientes (falta población): @string.Join(", ", Model.Resultado.SinDatos).</p>
+    }
+</section>

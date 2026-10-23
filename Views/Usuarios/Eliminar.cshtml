@@ -1,0 +1,15 @@
+@model Usuario
+@{ ViewData["Title"] = "Eliminar usuario"; }
+<section class="v">
+    <h1>Eliminar usuario</h1>
+    <p class="lead">Esta acción no se puede deshacer. Un usuario con reportes no se puede eliminar.</p>
+    <div class="card">
+        <p><b>@Model.Nombre</b> <span class="badge">@Model.Rol</span></p>
+        <p class="mt">@Model.Correo · @Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s")</p>
+        <form asp-action="Eliminar" method="post" class="inline">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn danger">Sí, eliminar</button>
+            <a class="sm" asp-action="Index">Cancelar</a>
+        </form>
+    </div>
+</section>

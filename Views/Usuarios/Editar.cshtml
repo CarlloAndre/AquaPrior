@@ -1,0 +1,15 @@
+@model UsuarioVM
+@{ ViewData["Title"] = "Editar usuario"; }
+<section class="v">
+    <h1>Editar usuario</h1>
+    <form class="card" asp-action="Editar" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="err"></div>
+        <input asp-for="Id" type="hidden" />
+        <label>Nombre<input asp-for="Nombre" /><span asp-validation-for="Nombre" class="err"></span></label>
+        <label>Correo<input asp-for="Correo" /><span asp-validation-for="Correo" class="err"></span></label>
+        <label>Rol<select asp-for="Rol" asp-items="Html.GetEnumSelectList<Rol>()"></select></label>
+        <label>Nueva contraseña (déjala vacía para no cambiarla)<input asp-for="Clave" autocomplete="new-password" /><span asp-validation-for="Clave" class="err"></span></label>
+        <button class="btn" type="submit">Guardar cambios</button>
+        <a class="sm" asp-action="Index">Cancelar</a>
+    </form>
+</section>

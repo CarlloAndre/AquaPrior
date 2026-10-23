@@ -1,0 +1,19 @@
+@model LoginVM
+@{ ViewData["Title"] = "Iniciar sesión"; }
+<section class="v">
+    <h1>Iniciar sesión</h1>
+    <p class="lead">Accede como ciudadano o administrador.</p>
+    <form class="card" asp-action="Login" asp-route-returnUrl="@(ViewData["ReturnUrl"] as string)" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="err"></div>
+        <label>Correo
+            <input asp-for="Correo" autocomplete="username" />
+            <span asp-validation-for="Correo" class="err"></span>
+        </label>
+        <label>Contraseña
+            <input asp-for="Clave" autocomplete="current-password" />
+            <span asp-validation-for="Clave" class="err"></span>
+        </label>
+        <button class="btn" type="submit">Entrar</button>
+        <p class="hint">¿No tienes cuenta? <a asp-action="Registro">Regístrate</a>.</p>
+    </form>
+</section>

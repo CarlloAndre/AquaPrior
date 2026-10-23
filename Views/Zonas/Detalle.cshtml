@@ -1,0 +1,58 @@
+@model ZonaDetalleVM
+@{
+    ViewData["Title"] = "Distrito " + Model.Zona.Nombre;
+    var retorno = Url.Action("Detalle", "Zonas", new { id = Model.Zona.Id });
+}
+<section class="v">
+    <p class="hint"><a asp-action="Index">← Distritos</a></p>
+    <div class="card">
+        <h1>@Model.Zona.Nombre</h1>
+        <p class="lead" style="margin-bottom:0">@Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s") en total · @Model.Verificados verificado@(Model.Verificados == 1 ? "" : "s")</p>
+        <p class="act" style="margin-top:12px">
+            <a class="sm" asp-action="Editar" asp-route-id="@Model.Zona.Id">Editar distrito</a>
+            <a class="sm" asp-action="Eliminar" asp-route-id="@Model.Zona.Id">Eliminar distrito</a>
+        </p>
+    </div>
+
+    <h2 style="margin-top:28px">Reportes del distrito</h2>
+    <p><a class="btn" asp-controller="Reportes" asp-action="Crear" asp-route-zonaId="@Model.Zona.Id" asp-route-returnUrl="@retorno">Agregar reporte a este distrito</a></p>
+    @if (Model.Reportes.Any())
+    {
+        <ul class="list">
+            @foreach (var f in Model.Reportes)
+            {
+                var r = f.Reporte;
+                <li class="it">
+                    <div></div>
+                    <div>
+                        <b>@r.Direccion</b> <span class="badge">@r.Estado</span>
+                        @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
+                        <div class="mt">
+                            @r.Usuario.Nombre · @Formato.Horas(r.HorasSinServicio) sin servicio ·
+                            @(r.PersonasAfectadas is int p ? $"{p} personas" : "sin estimado de personas")
+                        </div>
+                    </div>
+                    <div class="act">
+                        <form asp-controller="Reportes" asp-action="CambiarEstado" method="post" class="inline">
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <input type="hidden" name="returnUrl" value="@retorno" />
+                            <select name="estado" aria-label="Estado del reporte @r.Id">
+                                @foreach (var e in Enum.GetValues<EstadoReporte>())
+                                {
+                                    <option value="@e" selected="@(e == r.Estado)">@e</option>
+                                }
+                            </select>
+                            <button type="submit" class="sm">Guardar</button>
+                        </form>
+                        <a class="sm" asp-controller="Reportes" asp-action="Editar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Editar</a>
+                        <a class="sm" asp-controller="Reportes" asp-action="Eliminar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Eliminar</a>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">Este distrito aún no tiene reportes.</div>
+    }
+</section>

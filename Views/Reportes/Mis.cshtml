@@ -1,0 +1,36 @@
+@model List<Reporte>
+@{ ViewData["Title"] = "Mis reportes"; }
+<section class="v">
+    <h1>Mis reportes</h1>
+    <p class="lead">Historial de las interrupciones que has reportado. Puedes editar o eliminar un reporte mientras esté en estado Recibido.</p>
+    <p><a class="btn" asp-action="Crear">Nuevo reporte</a></p>
+    @if (Model.Any())
+    {
+        <ul class="list">
+            @foreach (var r in Model)
+            {
+                <li class="it">
+                    <div></div>
+                    <div>
+                        <b>@r.Zona.Nombre</b> · @r.Direccion <span class="badge">@r.Estado</span>
+                        <div class="mt">
+                            @Formato.Horas(r.HorasSinServicio) sin servicio ·
+                            @(r.PersonasAfectadas is int p ? $"{p} personas" : "sin estimado de personas")
+                        </div>
+                    </div>
+                    <div class="act">
+                        @if (r.Estado == EstadoReporte.Recibido)
+                        {
+                            <a class="sm" asp-action="Editar" asp-route-id="@r.Id">Editar</a>
+                            <a class="sm" asp-action="Eliminar" asp-route-id="@r.Id">Eliminar</a>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">Aún no has enviado reportes.</div>
+    }
+</section>

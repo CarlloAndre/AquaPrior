@@ -1,0 +1,26 @@
+@model HomeVM
+@{ ViewData["Title"] = "Zonas afectadas"; }
+<section class="v">
+    <h1>Zonas con interrupciones del agua potable</h1>
+    <p class="lead">Solo se muestran los reportes que el administrador ya verificó. Los puntajes indican qué zonas requieren mayor atención y son referenciales.</p>
+    <p class="hint">@Model.Pendientes reporte@(Model.Pendientes == 1 ? "" : "s") pendiente@(Model.Pendientes == 1 ? "" : "s") de revisión.</p>
+
+    @if (Model.Resultado.Ranking.Any())
+    {
+        <ul class="list">
+            @foreach (var z in Model.Resultado.Ranking)
+            {
+                <partial name="_ZonaItem" model="z" />
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty">Todavía no hay zonas verificadas para mostrar.</div>
+    }
+
+    @if (Model.Resultado.SinDatos.Any())
+    {
+        <p class="hint">Sin dato de población, no se les asigna prioridad: @string.Join(", ", Model.Resultado.SinDatos).</p>
+    }
+</section>
