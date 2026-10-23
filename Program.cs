@@ -36,10 +36,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 var app = builder.Build();
 
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AquaPriorContext>();
+//    db.Database.EnsureCreated();
+//    DbSeeder.Sembrar(db);
+//}
+
+// Haciendo uso de las migraciones para crear la base de datos y sembrar los datos iniciales
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AquaPriorContext>();
-    db.Database.EnsureCreated();
+
+    db.Database.Migrate();
+
     DbSeeder.Sembrar(db);
 }
 
