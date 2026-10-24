@@ -1,6 +1,44 @@
-﻿namespace AquaPrior.Views.Mapa
-{
-    public class Index
-    {
-    }
+﻿@model List<AquaPrior.ViewModels.MapaVM>
+@{
+    ViewData["Title"] = "Mapa de reportes";
 }
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<h2>Mapa de reportes por distrito</h2>
+<p class="text-muted">Haz clic en un distrito para ver cuántos reportes tiene.</p>
+<div id="mapa" style="height:520px; border-radius:8px;"></div>
+
+@if (Model.Any(z => z.Lat is null))
+{
+    <p class="text-muted mt-2">Sin coordenadas (no se muestran en el mapa): @string.Join(", ", Model.Where(z => z.Lat is null).Select(z => z.Nombre))</p>
+}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const datos = @Json.Serialize(Model);
+    const mapa = L.map('mapa').setView([-8.08, -79.0], 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18, attribution: '&copy; OpenStreetMap'
+    }).addTo(mapa);
+
+    const max = Math.max(1, ...datos.map(d => d.total));
+
+    function popup(d) {
+        const div = document.createElement('div');
+        const titulo = document.createElement('strong');
+        titulo.textContent = d.nombre;
+        div.append(titulo, document.createElement('br'));
+        div.append(`Hay ${d.total} reporte(s) en esta zona`, document.createElement('br'));
+        div.append(`Verificados: ${d.verificados} · Pendientes: ${d.recibidos}`);
+        return div;
+    }
+
+    datos.filter(d => d.lat !== null && d.lng !== null).forEach(d => {
+        const color = d.total === 0 ? '#9ca3af' : '#0d6efd';
+        L.circleMarker([d.lat, d.lng], {
+            radius: 8 + 22 * d.total / max,
+            color: color, fillColor: color, fillOpacity: 0.5
+        }).addTo(mapa).bindPopup(popup(d));
+    });
+</script>
