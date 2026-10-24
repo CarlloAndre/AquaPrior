@@ -24,6 +24,10 @@ public class ReporteVM
     [Display(Name = "Dirección o referencia")]
     public string Direccion { get; set; } = "";
 
+    [Required(ErrorMessage = "Describe el motivo del reporte."), StringLength(500, MinimumLength = 10, ErrorMessage = "El motivo debe tener entre 10 y 500 caracteres.")]
+    [Display(Name = "Motivo del reporte")]
+    public string Motivo { get; set; } = "";
+
     [Required(ErrorMessage = "Indica cuándo empezó el corte.")]
     [Display(Name = "Inicio del corte")]
     public DateTime? InicioCorte { get; set; }
