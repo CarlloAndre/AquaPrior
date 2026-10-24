@@ -1,6 +1,6 @@
 @model ZonaDetalleVM
 @{
-    ViewData["Title"] = "Distrito " + Model.Zona.Nombre;
+    ViewData["Title"] = "Zonas " + Model.Zona.Nombre;
     var retorno = Url.Action("Detalle", "Zonas", new { id = Model.Zona.Id });
 }
 <section class="v">
