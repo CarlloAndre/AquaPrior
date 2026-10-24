@@ -10,6 +10,7 @@
 <header>
     <div class="wrap bar">
         <a class="logo" asp-controller="Home" asp-action="Index">Aqua<span>Prior</span></a>
+        <a class="nav-link" asp-controller="Mapa" asp-action="Index">Mapa</a>
         <nav aria-label="Principal">
             <a asp-controller="Home" asp-action="Index">Zonas afectadas</a>
             @if (User.Identity?.IsAuthenticated == true)
