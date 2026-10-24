@@ -20,9 +20,10 @@ public class MapaController : Controller
             return new MapaVM
             {
                 Nombre = z.Nombre,
-                Total = z.Reportes.Count,
-                Verificados = z.Reportes.Count(r => r.Estado == EstadoReporte.Verificado),
-                Recibidos = z.Reportes.Count(r => r.Estado == EstadoReporte.Recibido),
+                // Un reporte puede afectar a varios distritos: se cuenta una vez por cada distrito (línea ReporteZona).
+                Total = z.ReporteZonas.Count,
+                Verificados = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Verificado),
+                Recibidos = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Recibido),
                 Lat = tiene ? c.Lat : null,
                 Lng = tiene ? c.Lng : null
             };

@@ -12,12 +12,15 @@ public class ZonaRepository : IZonaRepository
     public Task<List<Zona>> ListarAsync() => _db.Zonas.OrderBy(z => z.Nombre).ToListAsync();
 
     public Task<List<Zona>> ListarConReportesAsync() =>
-        _db.Zonas.Include(z => z.Reportes).OrderBy(z => z.Nombre).ToListAsync();
+        _db.Zonas.Include(z => z.ReporteZonas).ThenInclude(rz => rz.Reporte).OrderBy(z => z.Nombre).ToListAsync();
 
     public Task<Zona?> ObtenerAsync(int id) => _db.Zonas.FirstOrDefaultAsync(z => z.Id == id);
 
     public Task<Zona?> ObtenerConReportesAsync(int id) =>
-        _db.Zonas.Include(z => z.Reportes).ThenInclude(r => r.Usuario).FirstOrDefaultAsync(z => z.Id == id);
+        _db.Zonas
+            .Include(z => z.ReporteZonas).ThenInclude(rz => rz.Reporte).ThenInclude(r => r.Usuario)
+            .Include(z => z.ReporteZonas).ThenInclude(rz => rz.Reporte).ThenInclude(r => r.Zonas)
+            .FirstOrDefaultAsync(z => z.Id == id);
 
     public Task<bool> ExisteAsync(int id) => _db.Zonas.AnyAsync(z => z.Id == id);
 

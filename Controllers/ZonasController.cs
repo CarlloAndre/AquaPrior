@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AquaPrior.Controllers;
 
-/// <summary>CRUD independiente de Zonas (distritos) y pantalla maestro-detalle zona → reportes.</summary>
+/// <summary>CRUD independiente de Zonas (distritos) y vista de los reportes que afectan a cada una.</summary>
 [Authorize(Roles = "Administrador")]
 public class ZonasController : Controller
 {
@@ -21,18 +21,24 @@ public class ZonasController : Controller
 
     public async Task<IActionResult> Index() => View(await _zonas.ListarAsync());
 
-    // MAESTRO-DETALLE: la zona (maestro) con sus reportes (detalle)
+    // El distrito (maestro) con los reportes que lo afectan (detalle), según la tabla intermedia ReporteZona
     public async Task<IActionResult> Detalle(int id)
     {
         var zona = await _zonas.ObtenerAsync(id);
         if (zona is null) return NotFound();
 
-        var reportes = zona.Reportes.OrderByDescending(r => r.Id).ToList();
+        var lineas = zona.ReporteZonas.OrderByDescending(rz => rz.ReporteId).ToList();
+        var reportes = lineas.Select(rz => rz.Reporte).ToList();
         var duplicados = _reportes.Duplicados(reportes);
         return View(new ZonaDetalleVM
         {
             Zona = zona,
-            Reportes = reportes.Select(r => new ReporteFilaVM { Reporte = r, EsPosibleDuplicado = duplicados.Contains(r.Id) }).ToList(),
+            Reportes = lineas.Select(rz => new ReporteFilaVM
+            {
+                Reporte = rz.Reporte,
+                EsPosibleDuplicado = duplicados.Contains(rz.ReporteId),
+                PersonasEnZona = rz.PersonasAfectadas
+            }).ToList(),
             Verificados = reportes.Count(r => r.Estado == EstadoReporte.Verificado)
         });
     }

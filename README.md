@@ -6,18 +6,35 @@ Sistema web para el registro y la priorización de incidencias por interrupcione
 - .NET 8 SDK
 - SQL Server. Por defecto usa LocalDB de Windows (`(localdb)\MSSQLLocalDB`). Si usas otro servidor, cambia la cadena `ConnectionStrings:AquaPrior` en `appsettings.json`.
 
+## Base de datos: Code First con migraciones
+Las clases de `Models/` definen las tablas. La base se crea y se actualiza con migraciones de EF Core.
+
+Primera vez (genera la carpeta `Migrations/`). En Visual Studio: Herramientas, Administrador de paquetes NuGet, Consola del Administrador de paquetes, con `AquaPrior` como proyecto predeterminado:
+```
+Add-Migration Inicial
+Update-Database
+```
+O con la CLI, desde la carpeta del proyecto:
+```
+dotnet tool install --global dotnet-ef
+dotnet ef migrations add Inicial
+dotnet ef database update
+```
+Cuando cambies una entidad: `Add-Migration NombreDelCambio` y `Update-Database`. Al iniciar, la aplicación también aplica las migraciones pendientes (`Database.Migrate()`).
+
 ## Ejecutar
 ```
 dotnet restore
 dotnet run
 ```
-Al iniciar, la aplicación crea la base de datos `AquaPrior` (EnsureCreated) y carga datos ficticios de prueba.
+Al iniciar, la aplicación aplica las migraciones y crea los 11 distritos y una cuenta de administrador si no existen. No carga reportes ni ciudadanos de ejemplo.
 
-## Cuentas de prueba
+## Cuenta inicial
 | Rol | Correo | Contraseña |
 | --- | --- | --- |
 | Administrador | admin@aquaprior.pe | Admin123! |
-| Ciudadano | rosa@correo.pe | Rosa123! |
+
+Los ciudadanos se crean desde Registrarse. Cambia la contraseña del administrador en `Data/DbSeeder.cs` antes de entregar.
 
 ## Arquitectura (capas + MVC, sección 4.4 del informe)
 | Capa | Carpeta | Contenido |
@@ -32,7 +49,7 @@ Al iniciar, la aplicación crea la base de datos `AquaPrior` (EnsureCreated) y c
 | --- | --- |
 | Patrón Repository | `Repositories/` (`IReporteRepository`, `IZonaRepository`, `IUsuarioRepository` y sus implementaciones) |
 | Segundo patrón: Strategy | `Services/IPrioridadStrategy.cs` y `Estrategias.cs` (SAW, duración, personas) |
-| Maestro-detalle | `ZonasController.Detalle` y `Views/Zonas/Detalle.cshtml`: el distrito (maestro) con sus reportes (detalle), donde se agregan, editan, eliminan y verifican reportes |
+| Maestro-detalle (muchos a muchos) | Formulario de reporte (`Views/Shared/_CamposReporte.cshtml`): el reporte es el maestro y cada distrito afectado es una línea de detalle en la tabla intermedia `ReporteZona`, con sus personas afectadas. También `ZonasController.Detalle`: un distrito con los reportes que lo afectan |
 | CRUD independientes | `ZonasController`, `UsuariosController` y `ReportesController`, cada uno con listar, crear, editar y eliminar |
 | Validaciones | DataAnnotations en `ViewModels/` y reglas de negocio en `Services/` (ver abajo) |
 
@@ -59,4 +76,4 @@ Al iniciar, la aplicación crea la base de datos `AquaPrior` (EnsureCreated) y c
 ## Pendientes antes de la entrega
 - Los pesos (50 % y 50 %) y los umbrales (alta desde 70, media desde 40) son provisionales. El informe indica que el equipo debe acordarlos (`PrioridadService.UmbralAlta` y `UmbralMedia`).
 - Las fechas usan la hora del servidor (`DateTime.Now`).
-- Para producción: migraciones de EF Core en lugar de `EnsureCreated`, HTTPS con certificado real, revisión de la Ley N.° 29733 y pruebas del apartado 4.5.
+- Para producción: HTTPS con certificado real, revisión de la Ley N.° 29733 y pruebas del apartado 4.5.

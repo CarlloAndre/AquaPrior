@@ -13,4 +13,5 @@ public interface IReporteRepository
     Task AgregarAsync(Reporte reporte);
     Task GuardarAsync();
     Task EliminarAsync(Reporte reporte);
+    void QuitarLineas(IEnumerable<ReporteZona> lineas);
 }

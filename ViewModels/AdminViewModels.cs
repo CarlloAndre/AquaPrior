@@ -6,6 +6,7 @@ public class ReporteFilaVM
 {
     public Reporte Reporte { get; set; } = null!;
     public bool EsPosibleDuplicado { get; set; }
+    public int? PersonasEnZona { get; set; }
 }
 
 /// <summary>Maestro (zona) con su detalle (reportes de esa zona).</summary>

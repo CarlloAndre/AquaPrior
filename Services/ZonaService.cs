@@ -43,8 +43,8 @@ public class ZonaService
     {
         var z = await _zonas.ObtenerConReportesAsync(id);
         if (z is null) return "El distrito no existe.";
-        if (z.Reportes.Count > 0)
-            return $"No se puede eliminar: el distrito tiene {z.Reportes.Count} reporte(s) asociado(s).";
+        if (z.ReporteZonas.Count > 0)
+            return $"No se puede eliminar: el distrito tiene {z.ReporteZonas.Count} reporte(s) asociado(s).";
         await _zonas.EliminarAsync(z);
         return null;
     }

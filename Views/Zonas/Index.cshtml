@@ -11,7 +11,7 @@
             {
                 <li class="it">
                     <div></div>
-                    <div><b>@z.Nombre</b><div class="mt">@z.Reportes.Count reporte@(z.Reportes.Count == 1 ? "" : "s")</div></div>
+                    <div><b>@z.Nombre</b><div class="mt">@z.ReporteZonas.Count reporte@(z.ReporteZonas.Count == 1 ? "" : "s")</div></div>
                     <div class="act">
                         <a class="sm" asp-action="Detalle" asp-route-id="@z.Id">Ver reportes</a>
                         <a class="sm" asp-action="Editar" asp-route-id="@z.Id">Editar</a>

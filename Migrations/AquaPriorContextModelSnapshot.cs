@@ -44,22 +44,32 @@ namespace AquaPrior.Migrations
                     b.Property<DateTime>("InicioCorte")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("PersonasAfectadas")
-                        .HasColumnType("int");
-
                     b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ZonaId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UsuarioId");
 
+                    b.ToTable("Reportes");
+                });
+
+            modelBuilder.Entity("AquaPrior.Models.ReporteZona", b =>
+                {
+                    b.Property<int>("ReporteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ZonaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PersonasAfectadas")
+                        .HasColumnType("int");
+
+                    b.HasKey("ReporteId", "ZonaId");
+
                     b.HasIndex("ZonaId");
 
-                    b.ToTable("Reportes");
+                    b.ToTable("ReporteZonas");
                 });
 
             modelBuilder.Entity("AquaPrior.Models.Usuario", b =>
@@ -124,15 +134,31 @@ namespace AquaPrior.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("AquaPrior.Models.ReporteZona", b =>
+                {
+                    b.HasOne("AquaPrior.Models.Reporte", "Reporte")
+                        .WithMany("Zonas")
+                        .HasForeignKey("ReporteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("AquaPrior.Models.Zona", "Zona")
-                        .WithMany("Reportes")
+                        .WithMany("ReporteZonas")
                         .HasForeignKey("ZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Usuario");
+                    b.Navigation("Reporte");
 
                     b.Navigation("Zona");
+                });
+
+            modelBuilder.Entity("AquaPrior.Models.Reporte", b =>
+                {
+                    b.Navigation("Zonas");
                 });
 
             modelBuilder.Entity("AquaPrior.Models.Usuario", b =>
@@ -142,7 +168,7 @@ namespace AquaPrior.Migrations
 
             modelBuilder.Entity("AquaPrior.Models.Zona", b =>
                 {
-                    b.Navigation("Reportes");
+                    b.Navigation("ReporteZonas");
                 });
 #pragma warning restore 612, 618
         }

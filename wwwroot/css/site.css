@@ -21,7 +21,7 @@ h1{font-size:clamp(28px,5vw,42px);font-weight:800;max-width:20ch}h2{font-size:22
 section.v{padding:30px 0 50px}
 .msg{background:var(--sf);border:1px solid var(--wa);border-radius:8px;padding:10px 14px;margin:16px 0 0}
 .card{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:20px}
-form.card{display:grid;gap:13px;max-width:460px}
+form.card{display:grid;gap:13px;max-width:640px}
 label{display:grid;gap:4px;font-weight:600;font-size:15px}
 input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:9px 11px;width:100%}
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--wa);outline-offset:2px}
@@ -48,3 +48,8 @@ a.sm{text-decoration:none;display:inline-block;color:var(--ink)}
 a.sm:hover{border-color:var(--wa)}
 .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn.danger{background:var(--crit);color:#fff}
+.lineas{border:1px solid var(--ln);border-radius:8px;padding:12px;margin:0}
+.lineas legend{font-weight:600;font-size:15px;padding:0 6px}
+.linea{display:grid;grid-template-columns:1.6fr 1.2fr auto;gap:8px;align-items:start;margin-bottom:8px}
+.linea .err{grid-column:1/-1}
+@media (max-width:640px){.linea{grid-template-columns:1fr}}

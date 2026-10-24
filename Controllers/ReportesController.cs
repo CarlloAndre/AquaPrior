@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AquaPrior.Controllers;
 
-/// <summary>CRUD independiente de Reportes.</summary>
+/// <summary>CRUD independiente de Reportes (maestro) con sus distritos afectados (detalle).</summary>
 [Authorize]
 public class ReportesController : Controller
 {
@@ -27,8 +27,14 @@ public class ReportesController : Controller
     private int UsuarioId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private bool EsAdmin => User.IsInRole("Administrador");
 
-    private async Task CargarZonasAsync(ReporteVM vm) =>
+    private async Task PrepararAsync(ReporteVM vm)
+    {
         vm.Zonas = (await _zonas.ListarAsync()).Select(z => new SelectListItem(z.Nombre, z.Id.ToString()));
+        if (vm.Lineas.Count == 0) vm.Lineas.Add(new LineaZonaVM());
+    }
+
+    private static List<LineaZona> ALineas(ReporteVM vm) =>
+        vm.Lineas.Select(l => new LineaZona(l.ZonaId!.Value, l.PersonasAfectadas)).ToList();
 
     private static DateTime SinSegundos(DateTime d) => new(d.Ticks - d.Ticks % TimeSpan.TicksPerMinute);
 
@@ -50,21 +56,27 @@ public class ReportesController : Controller
     // R: historial propio (ciudadano)
     public async Task<IActionResult> Mis() => View(await _reportes.ListarPorUsuarioAsync(UsuarioId));
 
-    // C: crear (CUS-01)
+    // C: crear (CUS-01). Si viene zonaId, esa línea ya sale elegida.
     [HttpGet]
     public async Task<IActionResult> Crear(int? zonaId, string? returnUrl)
     {
-        var vm = new ReporteVM { ZonaId = zonaId, InicioCorte = SinSegundos(DateTime.Now.AddHours(-1)), ReturnUrl = returnUrl };
-        await CargarZonasAsync(vm);
+        var vm = new ReporteVM
+        {
+            InicioCorte = SinSegundos(DateTime.Now.AddHours(-1)),
+            ReturnUrl = returnUrl,
+            Lineas = new List<LineaZonaVM> { new() { ZonaId = zonaId } }
+        };
+        await PrepararAsync(vm);
         return View(vm);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Crear(ReporteVM vm)
     {
+        if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.RegistrarAsync(UsuarioId, vm.ZonaId!.Value, vm.Direccion, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte enviado. Queda pendiente de revisión por el administrador.";
@@ -72,7 +84,7 @@ public class ReportesController : Controller
             }
             ModelState.AddModelError(string.Empty, error);
         }
-        await CargarZonasAsync(vm);
+        await PrepararAsync(vm);
         return View(vm);
     }
 
@@ -80,25 +92,30 @@ public class ReportesController : Controller
     [HttpGet]
     public async Task<IActionResult> Editar(int id, string? returnUrl)
     {
-        var r = await _reportes.ObtenerAsync(id);
+        var r = await _reportes.ObtenerConDetalleAsync(id);
         if (r is null) return NotFound();
         if (!ReporteService.PuedeModificar(r, UsuarioId, EsAdmin)) return Forbid();
 
         var vm = new ReporteVM
         {
-            Id = r.Id, ZonaId = r.ZonaId, Direccion = r.Direccion, InicioCorte = SinSegundos(r.InicioCorte),
-            PersonasAfectadas = r.PersonasAfectadas, ReturnUrl = returnUrl
+            Id = r.Id,
+            Direccion = r.Direccion,
+            InicioCorte = SinSegundos(r.InicioCorte),
+            ReturnUrl = returnUrl,
+            Lineas = r.Zonas.OrderBy(z => z.Zona.Nombre)
+                .Select(z => new LineaZonaVM { ZonaId = z.ZonaId, PersonasAfectadas = z.PersonasAfectadas }).ToList()
         };
-        await CargarZonasAsync(vm);
+        await PrepararAsync(vm);
         return View(vm);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Editar(ReporteVM vm)
     {
+        if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.ZonaId!.Value, vm.Direccion, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte actualizado.";
@@ -106,7 +123,7 @@ public class ReportesController : Controller
             }
             ModelState.AddModelError(string.Empty, error);
         }
-        await CargarZonasAsync(vm);
+        await PrepararAsync(vm);
         return View(vm);
     }
 

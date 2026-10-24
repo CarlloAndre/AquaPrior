@@ -2,10 +2,6 @@
 <div asp-validation-summary="ModelOnly" class="err"></div>
 <input asp-for="Id" type="hidden" />
 <input asp-for="ReturnUrl" type="hidden" />
-<label>Distrito
-    <select asp-for="ZonaId" asp-items="Model.Zonas"><option value="">Elige un distrito</option></select>
-    <span asp-validation-for="ZonaId" class="err"></span>
-</label>
 <label>Dirección o referencia
     <input asp-for="Direccion" maxlength="80" placeholder="Ej. Mz. B, Urb. Los Jardines" />
     <span asp-validation-for="Direccion" class="err"></span>
@@ -14,7 +10,70 @@
     <input asp-for="InicioCorte" type="datetime-local" />
     <span asp-validation-for="InicioCorte" class="err"></span>
 </label>
-<label>Personas afectadas (si lo sabes)
-    <input asp-for="PersonasAfectadas" type="number" min="1" placeholder="Estimado" />
-    <span asp-validation-for="PersonasAfectadas" class="err"></span>
-</label>
+
+<fieldset class="lineas">
+    <legend>Distritos afectados</legend>
+    <span asp-validation-for="Lineas" class="err"></span>
+    <div id="lineas">
+        @for (var i = 0; i < Model.Lineas.Count; i++)
+        {
+            <div class="linea">
+                <select asp-for="Lineas[i].ZonaId" asp-items="Model.Zonas" aria-label="Distrito"><option value="">Elige un distrito</option></select>
+                <input asp-for="Lineas[i].PersonasAfectadas" type="number" min="1" placeholder="Personas (opcional)" aria-label="Personas afectadas" />
+                <button type="button" class="sm quitar">Quitar</button>
+                <span asp-validation-for="Lineas[i].ZonaId" class="err"></span>
+                <span asp-validation-for="Lineas[i].PersonasAfectadas" class="err"></span>
+            </div>
+        }
+    </div>
+    <button type="button" class="sm" id="agregar-linea">Agregar otro distrito</button>
+</fieldset>
+
+<template id="tpl-linea">
+    <div class="linea">
+        <select name="Lineas[__i__].ZonaId" aria-label="Distrito">
+            <option value="">Elige un distrito</option>
+            @foreach (var z in Model.Zonas)
+            {
+                <option value="@z.Value">@z.Text</option>
+            }
+        </select>
+        <input name="Lineas[__i__].PersonasAfectadas" type="number" min="1" placeholder="Personas (opcional)" aria-label="Personas afectadas" />
+        <button type="button" class="sm quitar">Quitar</button>
+    </div>
+</template>
+
+<script>
+(function () {
+    var cont = document.getElementById('lineas');
+    var tpl = document.getElementById('tpl-linea');
+
+    function reindexar() {
+        var filas = cont.querySelectorAll('.linea');
+        filas.forEach(function (fila, i) {
+            fila.querySelectorAll('select, input').forEach(function (el) {
+                el.name = el.name.replace(/Lineas\[[^\]]*\]/, 'Lineas[' + i + ']');
+                if (el.id) el.id = el.id.replace(/Lineas_[0-9]+__/, 'Lineas_' + i + '__');
+            });
+            var q = fila.querySelector('.quitar');
+            if (q) q.disabled = filas.length === 1;
+        });
+    }
+
+    document.getElementById('agregar-linea').addEventListener('click', function () {
+        var html = tpl.innerHTML.replace(/__i__/g, cont.querySelectorAll('.linea').length);
+        cont.insertAdjacentHTML('beforeend', html);
+        reindexar();
+    });
+
+    cont.addEventListener('click', function (e) {
+        if (!e.target.classList.contains('quitar')) return;
+        if (cont.querySelectorAll('.linea').length > 1) {
+            e.target.closest('.linea').remove();
+            reindexar();
+        }
+    });
+
+    reindexar();
+})();
+</script>
