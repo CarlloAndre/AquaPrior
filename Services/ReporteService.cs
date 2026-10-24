@@ -18,10 +18,12 @@ public class ReporteService
     public static bool PuedeModificar(Reporte r, int usuarioId, bool esAdmin) =>
         esAdmin || (r.UsuarioId == usuarioId && r.Estado == EstadoReporte.Recibido);
 
-    private async Task<string?> ValidarAsync(string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    private async Task<string?> ValidarAsync(string direccion, string motivo, DateTime inicio, IReadOnlyList<LineaZona> lineas)
     {
         direccion = (direccion ?? "").Trim();
         if (direccion.Length < 4 || direccion.Length > 80) return "La dirección debe tener entre 4 y 80 caracteres.";
+        motivo = (motivo ?? "").Trim();
+        if (motivo.Length < 10 || motivo.Length > 500) return "El motivo debe tener entre 10 y 500 caracteres.";
         if (inicio > DateTime.Now) return "La fecha de inicio no puede estar en el futuro.";
         if (lineas is null || lineas.Count == 0) return "Agrega al menos un distrito afectado.";
         if (lineas.Select(l => l.ZonaId).Distinct().Count() != lineas.Count)
@@ -35,15 +37,16 @@ public class ReporteService
     }
 
     // C: crear el maestro con sus líneas de detalle
-    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, string motivo, DateTime inicio, IReadOnlyList<LineaZona> lineas)
     {
-        var error = await ValidarAsync(direccion, inicio, lineas);
+        var error = await ValidarAsync(direccion, motivo, inicio, lineas);
         if (error is not null) return error;
 
         await _reportes.AgregarAsync(new Reporte
         {
             UsuarioId = usuarioId,
             Direccion = direccion.Trim(),
+            Motivo = motivo.Trim(),
             InicioCorte = inicio,
             Estado = EstadoReporte.Recibido,
             Zonas = lineas.Select(l => new ReporteZona { ZonaId = l.ZonaId, PersonasAfectadas = l.Personas }).ToList()
@@ -52,13 +55,13 @@ public class ReporteService
     }
 
     // U: actualizar el maestro y sincronizar sus líneas (quitar, modificar y agregar)
-    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, string motivo, DateTime inicio, IReadOnlyList<LineaZona> lineas)
     {
         var r = await _reportes.ObtenerConDetalleAsync(id);
         if (r is null) return "El reporte no existe.";
         if (!PuedeModificar(r, usuarioId, esAdmin)) return "No puedes modificar este reporte.";
 
-        var error = await ValidarAsync(direccion, inicio, lineas);
+        var error = await ValidarAsync(direccion, motivo, inicio, lineas);
         if (error is not null) return error;
 
         var nuevas = lineas.ToDictionary(l => l.ZonaId);
@@ -72,6 +75,7 @@ public class ReporteService
             r.Zonas.Add(new ReporteZona { ReporteId = r.Id, ZonaId = l.ZonaId, PersonasAfectadas = l.Personas });
 
         r.Direccion = direccion.Trim();
+        r.Motivo = motivo.Trim();
         r.InicioCorte = inicio;
         await _reportes.GuardarAsync();
         return null;

@@ -6,6 +6,10 @@
     <input asp-for="Direccion" maxlength="80" placeholder="Ej. Mz. B, Urb. Los Jardines" />
     <span asp-validation-for="Direccion" class="err"></span>
 </label>
+<label>Motivo del reporte
+    <textarea asp-for="Motivo" rows="4" maxlength="500" placeholder="Describe qué ocurre, por ejemplo: corte total, baja presión o agua turbia."></textarea>
+    <span asp-validation-for="Motivo" class="err"></span>
+</label>
 <label>Inicio del corte
     <input asp-for="InicioCorte" type="datetime-local" />
     <span asp-validation-for="InicioCorte" class="err"></span>

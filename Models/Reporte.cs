@@ -10,6 +10,7 @@ public class Reporte
     public int UsuarioId { get; set; }
     public Usuario Usuario { get; set; } = null!;
     [Required, StringLength(80)] public string Direccion { get; set; } = "";
+    [Required, StringLength(500)] public string Motivo { get; set; } = "";
     public DateTime InicioCorte { get; set; }
     public EstadoReporte Estado { get; set; } = EstadoReporte.Recibido;
     public DateTime FechaRegistro { get; set; } = DateTime.Now;

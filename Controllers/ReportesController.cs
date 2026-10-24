@@ -76,7 +76,7 @@ public class ReportesController : Controller
         if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
+            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Motivo, vm.InicioCorte!.Value, ALineas(vm));
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte enviado. Queda pendiente de revisión por el administrador.";
@@ -100,6 +100,7 @@ public class ReportesController : Controller
         {
             Id = r.Id,
             Direccion = r.Direccion,
+            Motivo = r.Motivo,
             InicioCorte = SinSegundos(r.InicioCorte),
             ReturnUrl = returnUrl,
             Lineas = r.Zonas.OrderBy(z => z.Zona.Nombre)
@@ -115,7 +116,7 @@ public class ReportesController : Controller
         if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
+            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Motivo, vm.InicioCorte!.Value, ALineas(vm));
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte actualizado.";
