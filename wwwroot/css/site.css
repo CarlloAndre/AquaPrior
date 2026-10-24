@@ -39,3 +39,16 @@
 [data-theme="dark"] .skip-link{background:var(--sf)}
 [data-theme="dark"] :focus-visible{outline-color:#78d8c7}
 @media(max-width:600px){.theme-toggle{padding:7px 9px;font-size:11px}.account{flex-wrap:wrap}}
+
+/* Formulario maestro-detalle de ReporteZona y pantalla de mapa. */
+.lineas{border:1px solid var(--ln);border-radius:10px;padding:18px;margin:0;min-width:0}
+.lineas legend{font-size:13px;font-weight:650;padding:0 7px}
+.linea{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:9px;align-items:start;margin-bottom:12px}
+.linea .err{grid-column:1/-1}
+.quitar:disabled{opacity:.45;cursor:not-allowed}
+.map-panel{border:1px solid var(--ln);border-radius:13px;overflow:hidden;background:var(--sf);box-shadow:var(--shadow)}
+#mapa{height:520px;min-height:320px;isolation:isolate}
+.map-caption{color:var(--mu);font-size:12px;padding:14px 20px;margin:0;border-top:1px solid var(--ln)}
+[data-theme="dark"] .leaflet-popup-content-wrapper,[data-theme="dark"] .leaflet-popup-tip{background:#132c34;color:#e2eef0}
+[data-theme="dark"] .leaflet-bar a{background:#132c34;color:#e2eef0}
+@media(max-width:600px){.linea{grid-template-columns:minmax(0,1fr)}.linea .quitar{justify-self:start}#mapa{height:400px}}

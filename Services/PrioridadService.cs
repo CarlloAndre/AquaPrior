@@ -29,12 +29,15 @@ public class PrioridadService
         // Consolidación: solo reportes verificados, agrupados por zona.
         var verificados = await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado);
         var zonas = new List<ZonaConsolidada>();
-        foreach (var g in verificados.GroupBy(r => r.Zona.Nombre))
+        // Cada reporte aporta una línea por distrito afectado (ReporteZona).
+        var lineas = verificados.SelectMany(r => r.Zonas.Select(rz => new { Linea = rz, Reporte = r }));
+        foreach (var g in lineas.GroupBy(x => x.Linea.Zona.Nombre))
         {
-            var personas = g.Where(r => r.PersonasAfectadas.HasValue).Select(r => r.PersonasAfectadas!.Value).ToList();
-            zonas.Add(new ZonaConsolidada(g.Key, g.Count(),
+            var personas = g.Where(x => x.Linea.PersonasAfectadas.HasValue)
+                .Select(x => x.Linea.PersonasAfectadas!.Value).ToList();
+            zonas.Add(new ZonaConsolidada(g.Key, g.Select(x => x.Reporte.Id).Distinct().Count(),
                 personas.Count > 0 ? personas.Max() : (int?)null,
-                g.Max(r => r.HorasSinServicio)));
+                g.Max(x => x.Reporte.HorasSinServicio)));
         }
 
         var aptas = zonas.Where(z => !estrategia.RequierePersonas || z.Personas.HasValue).ToList();

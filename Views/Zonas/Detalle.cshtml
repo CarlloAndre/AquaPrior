@@ -7,14 +7,14 @@
     <p class="hint"><a asp-action="Index">← Distritos</a></p>
     <div class="card">
         <h1>@Model.Zona.Nombre</h1>
-        <p class="lead" style="margin-bottom:0">@Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s") en total · @Model.Verificados verificado@(Model.Verificados == 1 ? "" : "s")</p>
+        <p class="lead" style="margin-bottom:0">@Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s") que lo afecta@(Model.Reportes.Count == 1 ? "" : "n") · @Model.Verificados verificado@(Model.Verificados == 1 ? "" : "s")</p>
         <p class="act" style="margin-top:12px">
             <a class="sm" asp-action="Editar" asp-route-id="@Model.Zona.Id">Editar distrito</a>
             <a class="sm" asp-action="Eliminar" asp-route-id="@Model.Zona.Id">Eliminar distrito</a>
         </p>
     </div>
 
-    <h2 style="margin-top:28px">Reportes del distrito</h2>
+    <h2 style="margin-top:28px">Reportes que afectan a este distrito</h2>
     <p><a class="btn" asp-controller="Reportes" asp-action="Crear" asp-route-zonaId="@Model.Zona.Id" asp-route-returnUrl="@retorno">Agregar reporte a este distrito</a></p>
     @if (Model.Reportes.Any())
     {
@@ -29,7 +29,8 @@
                         @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
                         <div class="mt">
                             @r.Usuario.Nombre · @Formato.Horas(r.HorasSinServicio) sin servicio ·
-                            @(r.PersonasAfectadas is int p ? $"{p} personas" : "sin estimado de personas")
+                            @(f.PersonasEnZona is int p ? $"{p} personas en este distrito" : "sin estimado de personas") ·
+                            afecta a @r.Zonas.Count distrito@(r.Zonas.Count == 1 ? "" : "s")
                         </div>
                     </div>
                     <div class="act">
@@ -53,6 +54,6 @@
     }
     else
     {
-        <div class="empty">Este distrito aún no tiene reportes.</div>
+        <div class="empty">Ningún reporte afecta todavía a este distrito.</div>
     }
 </section>

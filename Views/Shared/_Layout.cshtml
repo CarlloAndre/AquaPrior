@@ -23,6 +23,7 @@
     </a>
     <p class="nav-label">EXPLORAR</p>
     <nav aria-label="Navegación principal">
+        <a class="@(controlador == "Mapa" ? "active" : "")" aria-current="@(controlador == "Mapa" ? "page" : null)" asp-controller="Mapa" asp-action="Index"><span aria-hidden="true">◎</span>Mapa de reportes</a>
         <a class="@(Activo("Home", "Index") ? "active" : "")" aria-current="@(Activo("Home", "Index") ? "page" : null)" asp-controller="Home" asp-action="Index"><span aria-hidden="true">◫</span>Zonas afectadas</a>
         @if (autenticado)
         {
@@ -33,7 +34,7 @@
         {
             <p class="nav-label">ADMINISTRACIÓN</p>
             <a class="@(Activo("Reportes", "Index") ? "active" : "")" aria-current="@(Activo("Reportes", "Index") ? "page" : null)" asp-controller="Reportes" asp-action="Index"><span aria-hidden="true">▤</span>Gestionar reportes</a>
-            <a class="@(controlador == "Zonas" ? "active" : "")" asp-controller="Zonas" asp-action="Index"><span aria-hidden="true">◇</span>Distritos</a>
+            <a class="@(controlador == "Zonas" ? "active" : "")" asp-controller="Zonas" asp-action="Index"><span aria-hidden="true">◇</span>Zonas</a>
             <a class="@(controlador == "Usuarios" ? "active" : "")" asp-controller="Usuarios" asp-action="Index"><span aria-hidden="true">♧</span>Usuarios</a>
             <a class="@(Activo("Admin", "Prioridad") ? "active" : "")" aria-current="@(Activo("Admin", "Prioridad") ? "page" : null)" asp-controller="Admin" asp-action="Prioridad"><span aria-hidden="true">↗</span>Priorización</a>
             <a class="@(Activo("Admin", "Estadisticas") ? "active" : "")" aria-current="@(Activo("Admin", "Estadisticas") ? "page" : null)" asp-controller="Admin" asp-action="Estadisticas"><span aria-hidden="true">▥</span>Estadísticas</a>

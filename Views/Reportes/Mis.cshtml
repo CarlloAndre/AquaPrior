@@ -12,11 +12,8 @@
                 <li class="it">
                     <div></div>
                     <div>
-                        <b>@r.Zona.Nombre</b> · @r.Direccion <span class="badge">@r.Estado</span>
-                        <div class="mt">
-                            @Formato.Horas(r.HorasSinServicio) sin servicio ·
-                            @(r.PersonasAfectadas is int p ? $"{p} personas" : "sin estimado de personas")
-                        </div>
+                        <b>@Formato.Zonas(r)</b> <span class="badge">@r.Estado</span>
+                        <div class="mt">@r.Direccion · @Formato.Horas(r.HorasSinServicio) sin servicio</div>
                     </div>
                     <div class="act">
                         @if (r.Estado == EstadoReporte.Recibido)

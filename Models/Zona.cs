@@ -6,5 +6,5 @@ public class Zona
 {
     public int Id { get; set; }
     [Required, StringLength(80)] public string Nombre { get; set; } = "";
-    public ICollection<Reporte> Reportes { get; set; } = new List<Reporte>();
+    public ICollection<ReporteZona> ReporteZonas { get; set; } = new List<ReporteZona>();
 }
