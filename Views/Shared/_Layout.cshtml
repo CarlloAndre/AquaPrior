@@ -1,51 +1,74 @@
+@{
+    var controlador = ViewContext.RouteData.Values["controller"]?.ToString();
+    var accion = ViewContext.RouteData.Values["action"]?.ToString();
+    bool Activo(string c, string a) => controlador == c && accion == a;
+    var autenticado = User.Identity?.IsAuthenticated == true;
+    var administrador = User.IsInRole("Administrador");
+}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] – AquaPrior</title>
+    <meta name="theme-color" content="#103c46" />
+    <title>@ViewData["Title"] · AquaPrior</title>
+    <script src="~/js/theme.js" asp-append-version="true"></script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-<header>
-    <div class="wrap bar">
-        <a class="logo" asp-controller="Home" asp-action="Index">Aqua<span>Prior</span></a>
-        <nav aria-label="Principal">
-            <a asp-controller="Home" asp-action="Index">Zonas afectadas</a>
-            @if (User.Identity?.IsAuthenticated == true)
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<aside class="sidebar">
+    <a class="logo" asp-controller="Home" asp-action="Index">
+        <span class="brand-mark" aria-hidden="true">◒</span><span>Aqua<span class="brand-accent">Prior</span><small>Información que orienta</small></span>
+    </a>
+    <p class="nav-label">EXPLORAR</p>
+    <nav aria-label="Navegación principal">
+        <a class="@(Activo("Home", "Index") ? "active" : "")" aria-current="@(Activo("Home", "Index") ? "page" : null)" asp-controller="Home" asp-action="Index"><span aria-hidden="true">◫</span>Zonas afectadas</a>
+        @if (autenticado)
+        {
+            <a class="@(Activo("Reportes", "Crear") ? "active" : "")" aria-current="@(Activo("Reportes", "Crear") ? "page" : null)" asp-controller="Reportes" asp-action="Crear"><span aria-hidden="true">＋</span>Registrar reporte</a>
+            <a class="@(Activo("Reportes", "Mis") ? "active" : "")" aria-current="@(Activo("Reportes", "Mis") ? "page" : null)" asp-controller="Reportes" asp-action="Mis"><span aria-hidden="true">≡</span>Mis reportes</a>
+        }
+        @if (administrador)
+        {
+            <p class="nav-label">ADMINISTRACIÓN</p>
+            <a class="@(Activo("Reportes", "Index") ? "active" : "")" aria-current="@(Activo("Reportes", "Index") ? "page" : null)" asp-controller="Reportes" asp-action="Index"><span aria-hidden="true">▤</span>Gestionar reportes</a>
+            <a class="@(controlador == "Zonas" ? "active" : "")" asp-controller="Zonas" asp-action="Index"><span aria-hidden="true">◇</span>Distritos</a>
+            <a class="@(controlador == "Usuarios" ? "active" : "")" asp-controller="Usuarios" asp-action="Index"><span aria-hidden="true">♧</span>Usuarios</a>
+            <a class="@(Activo("Admin", "Prioridad") ? "active" : "")" aria-current="@(Activo("Admin", "Prioridad") ? "page" : null)" asp-controller="Admin" asp-action="Prioridad"><span aria-hidden="true">↗</span>Priorización</a>
+            <a class="@(Activo("Admin", "Estadisticas") ? "active" : "")" aria-current="@(Activo("Admin", "Estadisticas") ? "page" : null)" asp-controller="Admin" asp-action="Estadisticas"><span aria-hidden="true">▥</span>Estadísticas</a>
+        }
+    </nav>
+    <div class="sidebar-note"><span class="eyebrow">TRUJILLO · LA LIBERTAD</span><p>Una mejor vista de las interrupciones de agua en nuestra comunidad.</p></div>
+</aside>
+<div class="app-shell">
+    <header class="topbar">
+        <div class="location"><span class="location-dot" aria-hidden="true"></span>Provincia de Trujillo <span class="muted">/ @ViewData["Title"]</span></div>
+        <div class="account">
+            <button type="button" class="sm theme-toggle" id="theme-toggle" aria-label="Activar modo noche" aria-pressed="false" hidden>
+                <span data-theme-icon aria-hidden="true">☾</span><span data-theme-label>Modo noche</span>
+            </button>
+            @if (autenticado)
             {
-                <a asp-controller="Reportes" asp-action="Crear">Reportar</a>
-                <a asp-controller="Reportes" asp-action="Mis">Mis reportes</a>
-                if (User.IsInRole("Administrador"))
-                {
-                    <a asp-controller="Reportes" asp-action="Index">Reportes</a>
-                    <a asp-controller="Zonas" asp-action="Index">Distritos</a>
-                    <a asp-controller="Usuarios" asp-action="Index">Usuarios</a>
-                    <a asp-controller="Admin" asp-action="Prioridad">Prioridad</a>
-                    <a asp-controller="Admin" asp-action="Estadisticas">Estadísticas</a>
-                }
-                <span class="who">@User.Identity.Name · @(User.IsInRole("Administrador") ? "Administrador" : "Ciudadano")</span>
-                <form asp-controller="Cuenta" asp-action="Salir" method="post" class="inline">
-                    <button type="submit" class="linkbtn">Salir</button>
-                </form>
+                <span class="avatar" aria-hidden="true">@(User.Identity?.Name?.FirstOrDefault().ToString().ToUpperInvariant())</span>
+                <span class="identity"><b>@User.Identity?.Name</b><small>@(administrador ? "Administrador" : "Ciudadano")</small></span>
+                <form asp-controller="Cuenta" asp-action="Salir" method="post" class="inline"><button type="submit" class="sm">Salir</button></form>
             }
             else
             {
-                <a asp-controller="Cuenta" asp-action="Login">Iniciar sesión</a>
-                <a asp-controller="Cuenta" asp-action="Registro">Registrarse</a>
+                <a class="login-link" asp-controller="Cuenta" asp-action="Login">Iniciar sesión</a>
+                <a class="btn compact" asp-controller="Cuenta" asp-action="Registro">Crear cuenta</a>
             }
-        </nav>
-    </div>
-</header>
-<main class="wrap">
-    @if (TempData["Mensaje"] is string mensaje)
-    {
-        <p class="msg" role="status">@mensaje</p>
-    }
-    @RenderBody()
-</main>
-<footer>
-    <div class="wrap">Proyecto final de Diseño y Arquitectura de Software · Ingeniería de Sistemas Computacionales, Trujillo 2026-2. La prioridad es referencial y no reemplaza las decisiones de las entidades responsables.</div>
-</footer>
+        </div>
+    </header>
+    <main id="contenido" class="wrap" tabindex="-1">
+        @if (TempData["Mensaje"] is string mensaje)
+        {
+            <p class="msg" role="status">@mensaje</p>
+        }
+        @RenderBody()
+    </main>
+    <footer><div class="wrap"><b>AquaPrior</b><span>Proyecto académico · Trujillo, 2026</span><p>La prioridad es referencial y no reemplaza las decisiones de las entidades responsables.</p></div></footer>
+</div>
 </body>
 </html>

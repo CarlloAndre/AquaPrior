@@ -1,13 +1,8 @@
 @model ZonaPrioridad
 @{ var clase = Formato.ClaseNivel(Model.Nivel); }
-<li class="it @clase">
-    <div class="sc">@((int)Math.Round(Model.Puntaje * 100))</div>
-    <div>
-        <span class="lv">Prioridad @Model.Nivel.ToLowerInvariant()</span> · <b>@Model.Zona</b>
-        <div class="mt">
-            @(Model.Personas is int p ? $"Hasta {p} personas afectadas (estimado)" : "Sin dato de población")
-            · @Formato.Horas(Model.Horas) sin servicio
-            · @Model.Reportes reporte@(Model.Reportes == 1 ? "" : "s") verificado@(Model.Reportes == 1 ? "" : "s")
-        </div>
-    </div>
+<li class="it @clase zone-item">
+    <div class="score-block"><span class="sc">@((int)Math.Round(Model.Puntaje * 100))</span><small>de 100</small></div>
+    <div class="zone-description"><span class="lv">Prioridad @Model.Nivel.ToLowerInvariant()</span><h3>@Model.Zona</h3><div class="mt">@Model.Reportes reporte@(Model.Reportes == 1 ? "" : "s") verificado@(Model.Reportes == 1 ? "" : "s")</div></div>
+    <div class="zone-metric"><small>POBLACIÓN ESTIMADA</small><b>@(Model.Personas is int p ? $"Hasta {p:N0} personas" : "Sin dato de población")</b></div>
+    <div class="zone-metric"><small>TIEMPO SIN SERVICIO</small><b>@Formato.Horas(Model.Horas)</b></div>
 </li>

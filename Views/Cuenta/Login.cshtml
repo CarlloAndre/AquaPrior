@@ -1,8 +1,7 @@
 @model LoginVM
 @{ ViewData["Title"] = "Iniciar sesión"; }
 <section class="v">
-    <h1>Iniciar sesión</h1>
-    <p class="lead">Accede como ciudadano o administrador.</p>
+    <div class="auth-layout"><div class="auth-intro"><span class="eyebrow">AQUAPRIOR · TRUJILLO</span><h1>Bienvenido de nuevo.</h1><p class="lead">Ingresa para registrar una interrupción, consultar tus reportes y seguir la información de tu distrito.</p><div class="auth-detail"><b>Reportar es el primer paso.</b>Los reportes pasan por una revisión administrativa antes de participar en la priorización.</div></div><div>
     <form class="card" asp-action="Login" asp-route-returnUrl="@(ViewData["ReturnUrl"] as string)" method="post" novalidate>
         <div asp-validation-summary="ModelOnly" class="err"></div>
         <label>Correo
@@ -16,4 +15,5 @@
         <button class="btn" type="submit">Entrar</button>
         <p class="hint">¿No tienes cuenta? <a asp-action="Registro">Regístrate</a>.</p>
     </form>
+    </div></div>
 </section>

@@ -1,8 +1,7 @@
 @model RegistroVM
 @{ ViewData["Title"] = "Crear cuenta"; }
 <section class="v">
-    <h1>Crear cuenta de ciudadano</h1>
-    <p class="lead">Solo pedimos los datos necesarios para registrar tus reportes.</p>
+    <div class="auth-layout"><div class="auth-intro"><span class="eyebrow">AQUAPRIOR · TRUJILLO</span><h1>Tu comunidad empieza contigo.</h1><p class="lead">Crea tu cuenta de ciudadano y comparte información sobre los cortes de agua de tu distrito.</p><div class="auth-detail"><b>Reportar es el primer paso.</b>Los reportes pasan por una revisión administrativa antes de participar en la priorización.</div></div><div>
     <form class="card" asp-action="Registro" method="post" novalidate>
         <label>Nombre
             <input asp-for="Nombre" autocomplete="name" />
@@ -17,5 +16,7 @@
             <span asp-validation-for="Clave" class="err"></span>
         </label>
         <button class="btn" type="submit">Crear cuenta</button>
+        <p class="hint">¿Ya tienes cuenta? <a asp-action="Login">Inicia sesión</a>.</p>
     </form>
+    </div></div>
 </section>

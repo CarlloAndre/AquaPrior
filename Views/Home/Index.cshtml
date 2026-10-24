@@ -1,14 +1,38 @@
 @model HomeVM
-@{ ViewData["Title"] = "Zonas afectadas"; }
+@{
+    ViewData["Title"] = "Zonas afectadas";
+    var zonas = Model.Resultado.Ranking;
+}
 <section class="v">
-    <h1>Zonas con interrupciones del agua potable</h1>
-    <p class="lead">Solo se muestran los reportes que el administrador ya verificó. Los puntajes indican qué zonas requieren mayor atención y son referenciales.</p>
-    <p class="hint">@Model.Pendientes reporte@(Model.Pendientes == 1 ? "" : "s") pendiente@(Model.Pendientes == 1 ? "" : "s") de revisión.</p>
-
-    @if (Model.Resultado.Ranking.Any())
+    <div class="hero">
+        <div class="hero-content">
+            <span class="eyebrow">AGUA POTABLE · PARTICIPACIÓN CIUDADANA</span>
+            <h1>Cada reporte ayuda a ver<br class="desktop-break" /> dónde hace falta el agua.</h1>
+            <p>Consulta las zonas afectadas de Trujillo y comunica una interrupción en tu distrito. La información organizada es el primer paso.</p>
+            <div class="hero-actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="btn light" asp-controller="Reportes" asp-action="Crear">Registrar un reporte <span aria-hidden="true">↗</span></a>
+                }
+                else
+                {
+                    <a class="btn light" asp-controller="Cuenta" asp-action="Registro">Crear cuenta y reportar <span aria-hidden="true">↗</span></a>
+                }
+                <a class="hero-link" href="#zonas">Consultar zonas ↓</a>
+            </div>
+        </div>
+        <div class="water-art" aria-hidden="true"><div class="water-ring ring-one"></div><div class="water-ring ring-two"></div><div class="drop"></div><span>El agua nos conecta.</span></div>
+    </div>
+    <div class="stats-grid">
+        <div class="stat-card"><span class="stat-icon" aria-hidden="true">◇</span><div><span class="stat-label">Zonas con prioridad</span><strong>@zonas.Count</strong><small>Con información suficiente</small></div></div>
+        <div class="stat-card"><span class="stat-icon warm" aria-hidden="true">↗</span><div><span class="stat-label">Prioridad alta</span><strong>@zonas.Count(z => z.Nivel == "Alta")</strong><small>Según el cálculo actual</small></div></div>
+        <div class="stat-card"><span class="stat-icon neutral" aria-hidden="true">◷</span><div><span class="stat-label">Reportes por revisar</span><strong>@Model.Pendientes</strong><small>Pendientes de verificación</small></div></div>
+    </div>
+    <div class="section-heading" id="zonas"><div><span class="eyebrow">PANORAMA POR DISTRITO</span><h2>Zonas afectadas</h2><p class="hint">Solo los reportes verificados participan en la priorización.</p></div><span class="verified-label">● Información verificada</span></div>
+    @if (zonas.Any())
     {
-        <ul class="list">
-            @foreach (var z in Model.Resultado.Ranking)
+        <ul class="list ranking-list">
+            @foreach (var z in zonas)
             {
                 <partial name="_ZonaItem" model="z" />
             }
@@ -16,11 +40,11 @@
     }
     else
     {
-        <div class="empty">Todavía no hay zonas verificadas para mostrar.</div>
+        <div class="empty"><span class="empty-symbol" aria-hidden="true">◫</span><h3>Aún no hay zonas con prioridad calculada</h3><p>Los reportes necesitan revisión y datos suficientes antes de aparecer aquí.</p></div>
     }
-
     @if (Model.Resultado.SinDatos.Any())
     {
-        <p class="hint">Sin dato de población, no se les asigna prioridad: @string.Join(", ", Model.Resultado.SinDatos).</p>
+        <div class="notice"><b>Información por completar</b><p>No se asignó prioridad por falta de población estimada: @string.Join(", ", Model.Resultado.SinDatos).</p></div>
     }
+    <div class="how-it-works"><div><span>01</span><h3>Reporta</h3><p>Indica el distrito, la dirección y cuándo empezó el corte.</p></div><div><span>02</span><h3>Se revisa</h3><p>El administrador verifica la información recibida.</p></div><div><span>03</span><h3>Consulta</h3><p>Revisa la prioridad calculada por duración y población estimada.</p></div></div>
 </section>
