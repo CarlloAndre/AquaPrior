@@ -10,6 +10,8 @@ public class Reporte
     public int UsuarioId { get; set; }
     public Usuario Usuario { get; set; } = null!;
     [Required, StringLength(80)] public string Direccion { get; set; } = "";
+    public double? Latitud { get; set; }
+    public double? Longitud { get; set; }
     public DateTime InicioCorte { get; set; }
     public EstadoReporte Estado { get; set; } = EstadoReporte.Recibido;
     public DateTime FechaRegistro { get; set; } = DateTime.Now;

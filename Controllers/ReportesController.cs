@@ -5,7 +5,6 @@ using AquaPrior.Services;
 using AquaPrior.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AquaPrior.Controllers;
 
@@ -15,26 +14,15 @@ public class ReportesController : Controller
 {
     private readonly ReporteService _servicio;
     private readonly IReporteRepository _reportes;
-    private readonly IZonaRepository _zonas;
 
-    public ReportesController(ReporteService servicio, IReporteRepository reportes, IZonaRepository zonas)
+    public ReportesController(ReporteService servicio, IReporteRepository reportes)
     {
         _servicio = servicio;
         _reportes = reportes;
-        _zonas = zonas;
     }
 
     private int UsuarioId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private bool EsAdmin => User.IsInRole("Administrador");
-
-    private async Task PrepararAsync(ReporteVM vm)
-    {
-        vm.Zonas = (await _zonas.ListarAsync()).Select(z => new SelectListItem(z.Nombre, z.Id.ToString()));
-        if (vm.Lineas.Count == 0) vm.Lineas.Add(new LineaZonaVM());
-    }
-
-    private static List<LineaZona> ALineas(ReporteVM vm) =>
-        vm.Lineas.Select(l => new LineaZona(l.ZonaId!.Value, l.PersonasAfectadas)).ToList();
 
     private static DateTime SinSegundos(DateTime d) => new(d.Ticks - d.Ticks % TimeSpan.TicksPerMinute);
 
@@ -56,27 +44,17 @@ public class ReportesController : Controller
     // R: historial propio (ciudadano)
     public async Task<IActionResult> Mis() => View(await _reportes.ListarPorUsuarioAsync(UsuarioId));
 
-    // C: crear (CUS-01). Si viene zonaId, esa línea ya sale elegida.
+    // C: crear (CUS-01). El distrito se deduce de la ubicación exacta marcada en el mapa.
     [HttpGet]
-    public async Task<IActionResult> Crear(int? zonaId, string? returnUrl)
-    {
-        var vm = new ReporteVM
-        {
-            InicioCorte = SinSegundos(DateTime.Now.AddHours(-1)),
-            ReturnUrl = returnUrl,
-            Lineas = new List<LineaZonaVM> { new() { ZonaId = zonaId } }
-        };
-        await PrepararAsync(vm);
-        return View(vm);
-    }
+    public IActionResult Crear(string? returnUrl) =>
+        View(new ReporteVM { InicioCorte = SinSegundos(DateTime.Now.AddHours(-1)), ReturnUrl = returnUrl });
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Crear(ReporteVM vm)
     {
-        if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
+            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte enviado. Queda pendiente de revisión por el administrador.";
@@ -84,7 +62,6 @@ public class ReportesController : Controller
             }
             ModelState.AddModelError(string.Empty, error);
         }
-        await PrepararAsync(vm);
         return View(vm);
     }
 
@@ -100,22 +77,21 @@ public class ReportesController : Controller
         {
             Id = r.Id,
             Direccion = r.Direccion,
+            Latitud = r.Latitud,
+            Longitud = r.Longitud,
             InicioCorte = SinSegundos(r.InicioCorte),
             ReturnUrl = returnUrl,
-            Lineas = r.Zonas.OrderBy(z => z.Zona.Nombre)
-                .Select(z => new LineaZonaVM { ZonaId = z.ZonaId, PersonasAfectadas = z.PersonasAfectadas }).ToList()
+            PersonasAfectadas = r.Zonas.Select(z => z.PersonasAfectadas).Max()
         };
-        await PrepararAsync(vm);
         return View(vm);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Editar(ReporteVM vm)
     {
-        if (vm.Lineas.Count == 0) ModelState.AddModelError(nameof(vm.Lineas), "Agrega al menos un distrito afectado.");
         if (ModelState.IsValid)
         {
-            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.InicioCorte!.Value, ALineas(vm));
+            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte actualizado.";
@@ -123,7 +99,6 @@ public class ReportesController : Controller
             }
             ModelState.AddModelError(string.Empty, error);
         }
-        await PrepararAsync(vm);
         return View(vm);
     }
 

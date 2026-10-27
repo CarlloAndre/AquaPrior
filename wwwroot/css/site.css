@@ -48,7 +48,11 @@
 .quitar:disabled{opacity:.45;cursor:not-allowed}
 .map-panel{border:1px solid var(--ln);border-radius:13px;overflow:hidden;background:var(--sf);box-shadow:var(--shadow)}
 #mapa{height:520px;min-height:320px;isolation:isolate}
+#mapa-ubicacion{height:360px;min-height:300px;isolation:isolate}
 .map-caption{color:var(--mu);font-size:12px;padding:14px 20px;margin:0;border-top:1px solid var(--ln)}
 [data-theme="dark"] .leaflet-popup-content-wrapper,[data-theme="dark"] .leaflet-popup-tip{background:#132c34;color:#e2eef0}
 [data-theme="dark"] .leaflet-bar a{background:#132c34;color:#e2eef0}
-@media(max-width:600px){.linea{grid-template-columns:minmax(0,1fr)}.linea .quitar{justify-self:start}#mapa{height:400px}}
+@media(max-width:600px){.linea{grid-template-columns:minmax(0,1fr)}.linea .quitar{justify-self:start}#mapa{height:400px}#mapa-ubicacion{height:320px}}
+
+.heat-legend{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:.85rem;color:var(--mt,#6b7280)}
+.heat-legend i{flex:0 0 180px;height:10px;border-radius:6px;background:linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c)}

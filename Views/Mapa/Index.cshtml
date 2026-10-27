@@ -1,47 +1,68 @@
-@model List<AquaPrior.ViewModels.MapaVM>
+@model AquaPrior.ViewModels.MapaCalorVM
 @{
     ViewData["Title"] = "Mapa de reportes";
 }
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
 <section class="v">
 <span class="eyebrow">PANORAMA TERRITORIAL</span>
 <h1>Mapa de reportes</h1>
-<p class="lead">Haz clic en un distrito para ver cuántos reportes tiene.</p>
-<div class="map-panel"><div id="mapa" role="region" aria-label="Mapa de reportes por distrito"></div><p class="map-caption">El tamaño de cada marcador representa la cantidad de reportes del distrito. No representa su nivel de prioridad.</p></div>
-
-@if (Model.Any(z => z.Lat is null))
+<p class="lead">Cada reporte se ubica en su punto exacto. Las zonas donde se juntan más reportes, con más personas afectadas y más horas sin agua, se ven más rojas.</p>
+<div class="map-panel"><div id="mapa" role="region" aria-label="Mapa de calor de reportes de interrupción del agua"></div>
+<div class="heat-legend" aria-hidden="true"><span>Menor afectación</span><i></i><span>Mayor afectación</span></div>
+<p class="map-caption">La intensidad de cada punto combina personas afectadas y horas sin servicio (50 % y 50 %); los reportes sin verificar pesan menos. Haz clic en un punto para ver el detalle o en un distrito para ver sus totales. Límites distritales: INEI; capa publicada por Gobierno Regional La Libertad, “Manejo Sostenible y Restauración de bosque seco de la costa norte del Perú (Bosque Seco)”.</p></div>
+@if (!Model.Puntos.Any())
 {
-    <p class="hint">Sin coordenadas (no se muestran en el mapa): @string.Join(", ", Model.Where(z => z.Lat is null).Select(z => z.Nombre))</p>
+    <p class="hint">Aún no hay reportes con ubicación para mostrar.</p>
 }
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
-    const datos = @Json.Serialize(Model);
+    const puntos = @Json.Serialize(Model.Puntos);
+    const distritos = @Json.Serialize(Model.Distritos);
     const mapa = L.map('mapa').setView([-8.08, -79.0], 11);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18, attribution: '&copy; OpenStreetMap'
-    }).addTo(mapa);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
 
-    const max = Math.max(1, ...datos.map(d => d.total));
+    const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const resumen = {};
+    distritos.forEach(d => { resumen[norm(d.nombre)] = d; });
 
-    function popup(d) {
-        const div = document.createElement('div');
-        const titulo = document.createElement('strong');
-        titulo.textContent = d.nombre;
-        div.append(titulo, document.createElement('br'));
-        div.append(`Hay ${d.total} reporte(s) en esta zona`, document.createElement('br'));
-        div.append(`Verificados: ${d.verificados} · Pendientes: ${d.recibidos}`);
+    function popupDistrito(nombreKml) {
+        const d = resumen[norm(nombreKml)];
+        const div = document.createElement('div'), t = document.createElement('strong');
+        t.textContent = d ? d.nombre : nombreKml;
+        div.append(t, document.createElement('br'));
+        div.append(d ? ('Reportes: ' + d.total + ' · Verificados: ' + d.verificados + ' · Pendientes: ' + d.recibidos) : 'Sin reportes');
         return div;
     }
+    function enlazar(capa, nombre) {
+        nombre = (capa.feature && capa.feature.properties && capa.feature.properties.name) || nombre;
+        if (capa.getLatLngs) capa.bindPopup(() => popupDistrito(nombre || ''));
+        else if (capa.eachLayer) capa.eachLayer(h => enlazar(h, nombre));
+    }
+    const distritosKml = omnivore.kml('/mapas/trujillo-distritos.kml').addTo(mapa);
+    distritosKml.on('ready', function () {
+        enlazar(distritosKml, null);
+        if (this.getBounds().isValid()) mapa.fitBounds(this.getBounds(), { padding: [12, 12] });
+    });
 
-    datos.filter(d => d.lat !== null && d.lng !== null).forEach(d => {
-        const color = d.total === 0 ? '#9ca3af' : '#0d6efd';
-        L.circleMarker([d.lat, d.lng], {
-            radius: 8 + 22 * d.total / max,
-            color: color, fillColor: color, fillOpacity: 0.5
-        }).addTo(mapa).bindPopup(popup(d));
+    if (puntos.length) {
+        L.heatLayer(puntos.map(p => [p.lat, p.lng, p.intensidad]), {
+            radius: 32, blur: 24, max: 1.0, minOpacity: 0.35, maxZoom: 16,
+            gradient: { 0.2: '#2b83ba', 0.4: '#abdda4', 0.6: '#ffffbf', 0.8: '#fdae61', 1.0: '#d7191c' }
+        }).addTo(mapa);
+    }
+
+    // Punto exacto de cada reporte, con su detalle.
+    puntos.forEach(p => {
+        const div = document.createElement('div'), t = document.createElement('strong');
+        t.textContent = p.direccion;
+        div.append(t, document.createElement('br'),
+            'Personas afectadas: ' + (p.personas ?? 'sin dato'), document.createElement('br'),
+            'Horas sin servicio: ' + p.horas, document.createElement('br'),
+            'Estado: ' + p.estado);
+        L.circleMarker([p.lat, p.lng], { radius: 4, color: '#1f2937', weight: 1, fillColor: '#ffffff', fillOpacity: 0.9 })
+            .addTo(mapa).bindPopup(div);
     });
 </script>
 </section>

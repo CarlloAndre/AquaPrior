@@ -49,13 +49,16 @@ Los ciudadanos se crean desde Registrarse. Cambia la contraseña del administrad
 | --- | --- |
 | Patrón Repository | `Repositories/` (`IReporteRepository`, `IZonaRepository`, `IUsuarioRepository` y sus implementaciones) |
 | Segundo patrón: Strategy | `Services/IPrioridadStrategy.cs` y `Estrategias.cs` (SAW, duración, personas) |
-| Maestro-detalle (muchos a muchos) | Formulario de reporte (`Views/Shared/_CamposReporte.cshtml`): el reporte es el maestro y cada distrito afectado es una línea de detalle en la tabla intermedia `ReporteZona`, con sus personas afectadas. También `ZonasController.Detalle`: un distrito con los reportes que lo afectan |
+| Maestro-detalle (muchos a muchos) | El reporte es el maestro y su distrito es una línea de detalle en la tabla intermedia `ReporteZona`, con las personas afectadas. El usuario ya no elige el distrito: `DistritoLocator` lo deduce de las coordenadas exactas (punto dentro de polígono sobre el KML) y `ReporteService` crea la línea. También `ZonasController.Detalle`: un distrito con sus reportes |
 | CRUD independientes | `ZonasController`, `UsuariosController` y `ReportesController`, cada uno con listar, crear, editar y eliminar |
 | Validaciones | DataAnnotations en `ViewModels/` y reglas de negocio en `Services/` (ver abajo) |
 
+## Mapa de reportes (mapa de calor)
+`MapaService` entrega un punto por reporte (Recibido o Verificado) en su ubicación exacta. La intensidad mezcla personas afectadas y horas sin servicio (50 % y 50 %); un reporte sin verificar pesa 0.6. En la vista se dibuja con Leaflet.heat: donde se juntan varios reportes la mancha se vuelve más roja, así se ve qué parte de un distrito está peor y no solo el distrito completo.
+
 ## Validaciones
 - Formularios: campos obligatorios, longitudes, correo válido, contraseña de al menos 8 caracteres, personas afectadas mayor a 0.
-- Reportes: la fecha de inicio no puede estar en el futuro y el distrito debe existir. Un ciudadano solo edita o elimina sus reportes mientras estén en estado Recibido.
+- Reportes: la fecha de inicio no puede estar en el futuro y la ubicación debe caer dentro de un distrito del KML, con posibles personas afectadas mayor a 0. Un ciudadano solo edita o elimina sus reportes mientras estén en estado Recibido.
 - Distritos: nombre único. No se elimina un distrito con reportes.
 - Usuarios: correo único. No se elimina un usuario con reportes, ni la propia cuenta, ni al único administrador, y no se le puede quitar el rol.
 - Seguridad: token antifalsificación en todos los POST, autorización por rol y validación de la URL de retorno.

@@ -1,7 +1,9 @@
+using System.Globalization;
 using AquaPrior.Data;
 using AquaPrior.Repositories;
 using AquaPrior.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +22,9 @@ builder.Services.AddScoped<IPrioridadStrategy, PrioridadSaw>();
 builder.Services.AddScoped<IPrioridadStrategy, PrioridadDuracion>();
 builder.Services.AddScoped<IPrioridadStrategy, PrioridadPersonas>();
 builder.Services.AddScoped<PrioridadService>();
+builder.Services.AddSingleton<DistritoLocator>();
 builder.Services.AddScoped<ReporteService>();
+builder.Services.AddScoped<MapaService>();
 builder.Services.AddScoped<ZonaService>();
 builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<AuthService>();
@@ -48,6 +52,20 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+// Cultura fija con punto decimal: las coordenadas del mapa viajan como "-8.0912345" y, con una cultura
+// que use coma decimal (es-ES), el punto se leería como separador de miles y fallaría la validación.
+var cultura = (CultureInfo)CultureInfo.GetCultureInfo("es-PE").Clone();
+cultura.NumberFormat.NumberDecimalSeparator = ".";
+cultura.NumberFormat.NumberGroupSeparator = ",";
+var localizacion = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture(cultura),
+    SupportedCultures = new List<CultureInfo> { cultura },
+    SupportedUICultures = new List<CultureInfo> { cultura }
+};
+localizacion.RequestCultureProviders.Clear();
+app.UseRequestLocalization(localizacion);
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

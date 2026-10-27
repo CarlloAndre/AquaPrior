@@ -2,78 +2,72 @@
 <div asp-validation-summary="ModelOnly" class="err"></div>
 <input asp-for="Id" type="hidden" />
 <input asp-for="ReturnUrl" type="hidden" />
-<label>Dirección o referencia
-    <input asp-for="Direccion" maxlength="80" placeholder="Ej. Mz. B, Urb. Los Jardines" />
+<label>Dirección exacta
+    <input asp-for="Direccion" maxlength="80" placeholder="Ej. Av. España 123, Trujillo" />
     <span asp-validation-for="Direccion" class="err"></span>
 </label>
+<input asp-for="Latitud" type="hidden" id="Latitud" />
+<input asp-for="Longitud" type="hidden" id="Longitud" />
+<fieldset>
+    <legend>Ubicación exacta del reporte</legend>
+    <p class="hint">Escribe la dirección y haz clic en el punto exacto en el mapa. El marcador guarda las coordenadas del reporte.</p>
+    <div class="map-panel"><div id="mapa-ubicacion" role="region" aria-label="Selecciona la ubicación exacta del reporte en el mapa"></div><p id="estado-ubicacion" class="map-caption" aria-live="polite">Haz clic en el mapa para colocar el marcador.</p></div>
+    <span asp-validation-for="Latitud" class="err"></span>
+    <span asp-validation-for="Longitud" class="err"></span>
+</fieldset>
 <label>Inicio del corte
     <input asp-for="InicioCorte" type="datetime-local" />
     <span asp-validation-for="InicioCorte" class="err"></span>
 </label>
-
-<fieldset class="lineas">
-    <legend>Distritos afectados</legend>
-    <span asp-validation-for="Lineas" class="err"></span>
-    <div id="lineas">
-        @for (var i = 0; i < Model.Lineas.Count; i++)
-        {
-            <div class="linea">
-                <select asp-for="Lineas[i].ZonaId" asp-items="Model.Zonas" aria-label="Distrito"><option value="">Elige un distrito</option></select>
-                <input asp-for="Lineas[i].PersonasAfectadas" type="number" min="1" placeholder="Personas (opcional)" aria-label="Personas afectadas" />
-                <button type="button" class="sm quitar">Quitar</button>
-                <span asp-validation-for="Lineas[i].ZonaId" class="err"></span>
-                <span asp-validation-for="Lineas[i].PersonasAfectadas" class="err"></span>
-            </div>
-        }
-    </div>
-    <button type="button" class="sm" id="agregar-linea">Agregar otro distrito</button>
-</fieldset>
-
-<template id="tpl-linea">
-    <div class="linea">
-        <select name="Lineas[__i__].ZonaId" aria-label="Distrito">
-            <option value="">Elige un distrito</option>
-            @foreach (var z in Model.Zonas)
-            {
-                <option value="@z.Value">@z.Text</option>
-            }
-        </select>
-        <input name="Lineas[__i__].PersonasAfectadas" type="number" min="1" placeholder="Personas (opcional)" aria-label="Personas afectadas" />
-        <button type="button" class="sm quitar">Quitar</button>
-    </div>
-</template>
-
+<label>Posibles personas afectadas
+    <input asp-for="PersonasAfectadas" type="number" min="1" placeholder="Ej. 40 (personas que se quedaron sin agua en tu entorno)" />
+    <span class="hint">Con este dato y las horas sin servicio se calcula qué tan prioritaria es la zona.</span>
+    <span asp-validation-for="PersonasAfectadas" class="err"></span>
+</label>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
 <script>
 (function () {
-    var cont = document.getElementById('lineas');
-    var tpl = document.getElementById('tpl-linea');
-
-    function reindexar() {
-        var filas = cont.querySelectorAll('.linea');
-        filas.forEach(function (fila, i) {
-            fila.querySelectorAll('select, input').forEach(function (el) {
-                el.name = el.name.replace(/Lineas\[[^\]]*\]/, 'Lineas[' + i + ']');
-                if (el.id) el.id = el.id.replace(/Lineas_[0-9]+__/, 'Lineas_' + i + '__');
-            });
-            var q = fila.querySelector('.quitar');
-            if (q) q.disabled = filas.length === 1;
-        });
-    }
-
-    document.getElementById('agregar-linea').addEventListener('click', function () {
-        var html = tpl.innerHTML.replace(/__i__/g, cont.querySelectorAll('.linea').length);
-        cont.insertAdjacentHTML('beforeend', html);
-        reindexar();
-    });
-
-    cont.addEventListener('click', function (e) {
-        if (!e.target.classList.contains('quitar')) return;
-        if (cont.querySelectorAll('.linea').length > 1) {
-            e.target.closest('.linea').remove();
-            reindexar();
+    const latInput = document.getElementById('Latitud'), lngInput = document.getElementById('Longitud');
+    const estado = document.getElementById('estado-ubicacion');
+    const latInicial = Number(latInput.value), lngInicial = Number(lngInput.value);
+    const tieneInicial = latInput.value !== '' && lngInput.value !== '';
+    const mapa = L.map('mapa-ubicacion').setView(tieneInicial ? [latInicial, lngInicial] : [-8.08, -79.0], tieneInicial ? 16 : 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+    const capaDistritos = omnivore.kml('/mapas/trujillo-distritos.kml').addTo(mapa);
+    function dentro(anillo, lat, lng) {
+        let d = false;
+        for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+            const a = anillo[i], b = anillo[j];
+            if ((a.lat > lat) !== (b.lat > lat) && lng < (b.lng - a.lng) * (lat - a.lat) / (b.lat - a.lat) + a.lng) d = !d;
         }
+        return d;
+    }
+    function distritoEn(lat, lng) {
+        let nombre = null;
+        function recorrer(capa, nom) {
+            if (nombre) return;
+            nom = (capa.feature && capa.feature.properties && capa.feature.properties.name) || nom;
+            if (capa.getLatLngs) {
+                const g = capa.getLatLngs();
+                const anillos = Array.isArray(g[0]) && Array.isArray(g[0][0]) ? g.map(x => x[0]) : [Array.isArray(g[0]) ? g[0] : g];
+                if (anillos.some(r => dentro(r, lat, lng))) nombre = nom || 'Distrito';
+            } else if (capa.eachLayer) {
+                capa.eachLayer(function (h) { recorrer(h, nom); });
+            }
+        }
+        recorrer(capaDistritos, null);
+        return nombre;
+    }
+    let marcador = tieneInicial ? L.marker([latInicial, lngInicial]).addTo(mapa) : null;
+    mapa.on('click', function (e) {
+        latInput.value = e.latlng.lat.toFixed(7); lngInput.value = e.latlng.lng.toFixed(7);
+        if (marcador) marcador.setLatLng(e.latlng); else marcador = L.marker(e.latlng).addTo(mapa);
+        const dist = distritoEn(e.latlng.lat, e.latlng.lng);
+        estado.textContent = dist
+            ? 'Ubicación seleccionada en el distrito de ' + dist + ' (' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + ').'
+            : 'Ese punto está fuera de los distritos de Trujillo. Elige otro.';
     });
-
-    reindexar();
 })();
 </script>

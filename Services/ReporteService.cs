@@ -1,3 +1,4 @@
+using System.Globalization;
 using AquaPrior.Models;
 using AquaPrior.Repositories;
 
@@ -7,71 +8,93 @@ public class ReporteService
 {
     private readonly IReporteRepository _reportes;
     private readonly IZonaRepository _zonas;
+    private readonly DistritoLocator _locator;
 
-    public ReporteService(IReporteRepository reportes, IZonaRepository zonas)
+    public ReporteService(IReporteRepository reportes, IZonaRepository zonas, DistritoLocator locator)
     {
         _reportes = reportes;
         _zonas = zonas;
+        _locator = locator;
     }
 
     /// <summary>El administrador puede todo. El ciudadano solo sus reportes y mientras estén en estado Recibido.</summary>
     public static bool PuedeModificar(Reporte r, int usuarioId, bool esAdmin) =>
         esAdmin || (r.UsuarioId == usuarioId && r.Estado == EstadoReporte.Recibido);
 
-    private async Task<string?> ValidarAsync(string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    private static string? Validar(string direccion, double latitud, double longitud, DateTime inicio, int? personas)
     {
         direccion = (direccion ?? "").Trim();
         if (direccion.Length < 4 || direccion.Length > 80) return "La dirección debe tener entre 4 y 80 caracteres.";
+        if (!double.IsFinite(latitud) || !double.IsFinite(longitud) || latitud is < -90 or > 90 || longitud is < -180 or > 180)
+            return "Marca una ubicación válida en el mapa.";
         if (inicio > DateTime.Now) return "La fecha de inicio no puede estar en el futuro.";
-        if (lineas is null || lineas.Count == 0) return "Agrega al menos un distrito afectado.";
-        if (lineas.Select(l => l.ZonaId).Distinct().Count() != lineas.Count)
-            return "Un distrito no puede repetirse en el mismo reporte.";
-        foreach (var l in lineas)
-        {
-            if (l.Personas is <= 0) return "Las personas afectadas deben ser un número mayor a 0.";
-            if (!await _zonas.ExisteAsync(l.ZonaId)) return "Uno de los distritos elegidos no existe.";
-        }
+        if (personas is null or <= 0) return "Indica cuántas personas podrían estar afectadas (mayor a 0).";
         return null;
     }
 
-    // C: crear el maestro con sus líneas de detalle
-    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    /// <summary>
+    /// El distrito ya no lo elige el usuario: se deduce de las coordenadas exactas del reporte
+    /// (punto dentro de polígono sobre el KML). Devuelve el Id de la zona o un error.
+    /// </summary>
+    private async Task<(int? ZonaId, string? Error)> ResolverZonaAsync(double lat, double lng)
     {
-        var error = await ValidarAsync(direccion, inicio, lineas);
+        var normalizado = _locator.NombreNormalizadoEn(lat, lng);
+        if (normalizado is null)
+            return (null, "La ubicación marcada está fuera de los distritos de Trujillo. Marca un punto dentro del mapa de distritos.");
+
+        var zonas = await _zonas.ListarAsync();
+        var zona = zonas.FirstOrDefault(z => DistritoLocator.Normalizar(z.Nombre) == normalizado);
+        if (zona is null)
+        {
+            // El KML trae un distrito que aún no existe en la base (p. ej. Alto Trujillo): se crea.
+            var nombre = CultureInfo.GetCultureInfo("es-PE").TextInfo.ToTitleCase(normalizado);
+            zona = new Zona { Nombre = nombre };
+            await _zonas.AgregarAsync(zona);
+        }
+        return (zona.Id, null);
+    }
+
+    // C: crear el reporte; el sistema genera su línea de distrito a partir de la ubicación
+    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, double latitud, double longitud, DateTime inicio, int? personas)
+    {
+        var error = Validar(direccion, latitud, longitud, inicio, personas);
         if (error is not null) return error;
+        var (zonaId, errZona) = await ResolverZonaAsync(latitud, longitud);
+        if (errZona is not null) return errZona;
 
         await _reportes.AgregarAsync(new Reporte
         {
             UsuarioId = usuarioId,
             Direccion = direccion.Trim(),
+            Latitud = latitud,
+            Longitud = longitud,
             InicioCorte = inicio,
             Estado = EstadoReporte.Recibido,
-            Zonas = lineas.Select(l => new ReporteZona { ZonaId = l.ZonaId, PersonasAfectadas = l.Personas }).ToList()
+            Zonas = new List<ReporteZona> { new() { ZonaId = zonaId!.Value, PersonasAfectadas = personas } }
         });
         return null;
     }
 
-    // U: actualizar el maestro y sincronizar sus líneas (quitar, modificar y agregar)
-    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, DateTime inicio, IReadOnlyList<LineaZona> lineas)
+    // U: actualizar; si el punto cambió de distrito, la línea de detalle se recalcula
+    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, double latitud, double longitud, DateTime inicio, int? personas)
     {
         var r = await _reportes.ObtenerConDetalleAsync(id);
         if (r is null) return "El reporte no existe.";
         if (!PuedeModificar(r, usuarioId, esAdmin)) return "No puedes modificar este reporte.";
 
-        var error = await ValidarAsync(direccion, inicio, lineas);
+        var error = Validar(direccion, latitud, longitud, inicio, personas);
         if (error is not null) return error;
+        var (zonaId, errZona) = await ResolverZonaAsync(latitud, longitud);
+        if (errZona is not null) return errZona;
 
-        var nuevas = lineas.ToDictionary(l => l.ZonaId);
-
-        _reportes.QuitarLineas(r.Zonas.Where(rz => !nuevas.ContainsKey(rz.ZonaId)).ToList());
-        foreach (var rz in r.Zonas.Where(rz => nuevas.ContainsKey(rz.ZonaId)))
-            rz.PersonasAfectadas = nuevas[rz.ZonaId].Personas;
-
-        var existentes = r.Zonas.Select(rz => rz.ZonaId).ToHashSet();
-        foreach (var l in lineas.Where(l => !existentes.Contains(l.ZonaId)))
-            r.Zonas.Add(new ReporteZona { ReporteId = r.Id, ZonaId = l.ZonaId, PersonasAfectadas = l.Personas });
+        _reportes.QuitarLineas(r.Zonas.Where(rz => rz.ZonaId != zonaId).ToList());
+        var linea = r.Zonas.FirstOrDefault(rz => rz.ZonaId == zonaId);
+        if (linea is not null) linea.PersonasAfectadas = personas;
+        else r.Zonas.Add(new ReporteZona { ReporteId = r.Id, ZonaId = zonaId!.Value, PersonasAfectadas = personas });
 
         r.Direccion = direccion.Trim();
+        r.Latitud = latitud;
+        r.Longitud = longitud;
         r.InicioCorte = inicio;
         await _reportes.GuardarAsync();
         return null;

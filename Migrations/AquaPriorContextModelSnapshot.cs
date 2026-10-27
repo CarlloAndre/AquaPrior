@@ -44,6 +44,12 @@ namespace AquaPrior.Migrations
                     b.Property<DateTime>("InicioCorte")
                         .HasColumnType("datetime2");
 
+                    b.Property<double?>("Latitud")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitud")
+                        .HasColumnType("float");
+
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
 

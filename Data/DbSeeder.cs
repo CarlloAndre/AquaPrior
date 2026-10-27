@@ -13,7 +13,7 @@ public static class DbSeeder
     {
         if (!db.Zonas.Any())
         {
-            var nombres = new[] { "Trujillo", "El Porvenir", "Florencia de Mora", "Huanchaco", "La Esperanza",
+            var nombres = new[] { "Trujillo", "Alto Trujillo", "El Porvenir", "Florencia de Mora", "Huanchaco", "La Esperanza",
                 "Laredo", "Moche", "Poroto", "Salaverry", "Simbal", "Víctor Larco Herrera" };
             db.Zonas.AddRange(nombres.Select(n => new Zona { Nombre = n }));
         }

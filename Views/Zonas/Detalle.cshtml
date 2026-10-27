@@ -15,7 +15,7 @@
     </div>
 
     <h2 style="margin-top:28px">Reportes que afectan a este distrito</h2>
-    <p><a class="btn" asp-controller="Reportes" asp-action="Crear" asp-route-zonaId="@Model.Zona.Id" asp-route-returnUrl="@retorno">Agregar reporte a este distrito</a></p>
+    <p><a class="btn" asp-controller="Reportes" asp-action="Crear" asp-route-returnUrl="@retorno">Registrar un reporte</a></p>
     @if (Model.Reportes.Any())
     {
         <ul class="list">

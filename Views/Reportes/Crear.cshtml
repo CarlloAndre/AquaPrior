@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Reportar una interrupción"; }
 <section class="v">
     <h1>Reportar una interrupción</h1>
-    <p class="lead">Cuéntanos qué zona se quedó sin agua. El administrador revisará tu reporte antes de usarlo en la priorización.</p>
+    <p class="lead">Marca en el mapa el punto exacto donde se interrumpió el servicio; el distrito se detecta solo. El administrador revisará tu reporte antes de usarlo en la priorización.</p>
     <form class="card" asp-action="Crear" method="post" novalidate>
         <partial name="_CamposReporte" model="Model" />
         <button class="btn" type="submit">Enviar reporte</button>
