@@ -29,6 +29,7 @@ public class MapaService
         var todos = await _reportes.ListarTodosAsync();
         var usables = todos
             .Where(r => r.Latitud.HasValue && r.Longitud.HasValue
+                        && r.FinCorte is null
                         && (r.Estado == EstadoReporte.Verificado || r.Estado == EstadoReporte.Recibido))
             .ToList();
 

@@ -26,18 +26,17 @@ public class PrioridadService
         pesoPersonas = Math.Clamp(pesoPersonas, 0, 1);
         var estrategia = _estrategias.FirstOrDefault(e => e.Clave == clave) ?? _estrategias.First();
 
-        // Consolidación: solo reportes verificados, agrupados por zona.
-        var verificados = await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado);
+        // Consolidación: solo reportes verificados y con el corte aún abierto. Los reportes cercanos se
+        // agrupan en incidentes (varios vecinos, un mismo corte) y las personas se suman por incidente, no por reporte.
+        var verificados = (await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado)).Where(r => r.FinCorte is null);
+        var incidentes = Incidentes.Agrupar(verificados);
         var zonas = new List<ZonaConsolidada>();
-        // Cada reporte aporta una línea por distrito afectado (ReporteZona).
-        var lineas = verificados.SelectMany(r => r.Zonas.Select(rz => new { Linea = rz, Reporte = r }));
-        foreach (var g in lineas.GroupBy(x => x.Linea.Zona.Nombre))
+        foreach (var g in incidentes.GroupBy(i => i.ZonaNombre))
         {
-            var personas = g.Where(x => x.Linea.PersonasAfectadas.HasValue)
-                .Select(x => x.Linea.PersonasAfectadas!.Value).ToList();
-            zonas.Add(new ZonaConsolidada(g.Key, g.Select(x => x.Reporte.Id).Distinct().Count(),
-                personas.Count > 0 ? personas.Max() : (int?)null,
-                g.Max(x => x.Reporte.HorasSinServicio)));
+            var personas = g.Select(i => i.Personas).Where(p => p > 0).ToList();
+            zonas.Add(new ZonaConsolidada(g.Key, g.Sum(i => i.Reportes.Count),
+                personas.Count > 0 ? personas.Sum() : (int?)null,
+                g.Max(i => i.Horas)));
         }
 
         var aptas = zonas.Where(z => !estrategia.RequierePersonas || z.Personas.HasValue).ToList();

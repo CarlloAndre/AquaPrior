@@ -56,3 +56,13 @@
 
 .heat-legend{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:.85rem;color:var(--mt,#6b7280)}
 .heat-legend i{flex:0 0 180px;height:10px;border-radius:6px;background:linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c)}
+
+#mapa-admin{height:340px;min-height:260px;isolation:isolate}
+.filtros{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:14px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 12px;border:1px solid var(--ln);border-radius:999px;text-decoration:none;font-size:.9rem}
+.chip.on{background:var(--ac,#0f766e);color:#fff;border-color:transparent}
+.chip small{opacity:.8;margin-left:4px}
+.sublista{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.incidente.resaltado{outline:2px solid #f59e0b;outline-offset:2px;transition:outline .2s}
+@media(max-width:600px){#mapa-admin{height:280px}}

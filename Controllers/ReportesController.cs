@@ -5,6 +5,7 @@ using AquaPrior.Services;
 using AquaPrior.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AquaPrior.Controllers;
 
@@ -14,11 +15,13 @@ public class ReportesController : Controller
 {
     private readonly ReporteService _servicio;
     private readonly IReporteRepository _reportes;
+    private readonly IZonaRepository _zonas;
 
-    public ReportesController(ReporteService servicio, IReporteRepository reportes)
+    public ReportesController(ReporteService servicio, IReporteRepository reportes, IZonaRepository zonas)
     {
         _servicio = servicio;
         _reportes = reportes;
+        _zonas = zonas;
     }
 
     private int UsuarioId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -32,13 +35,18 @@ public class ReportesController : Controller
         return EsAdmin ? RedirectToAction(nameof(Index)) : RedirectToAction(nameof(Mis));
     }
 
-    // R: listado general (administrador)
+    // R: cola de trabajo del administrador. Incidentes (reportes cercanos) ordenados por urgencia.
     [Authorize(Roles = "Administrador")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string filtro = "pendientes", int? zonaId = null)
     {
-        var todos = await _reportes.ListarTodosAsync();
-        var duplicados = _servicio.Duplicados(todos);
-        return View(todos.Select(r => new ReporteFilaVM { Reporte = r, EsPosibleDuplicado = duplicados.Contains(r.Id) }).ToList());
+        var cola = await _servicio.ColaAdminAsync(filtro, zonaId);
+        return View(new ColaAdminVM
+        {
+            Filtro = filtro,
+            ZonaId = zonaId,
+            Cola = cola,
+            Zonas = (await _zonas.ListarAsync()).Select(z => new SelectListItem(z.Nombre, z.Id.ToString(), z.Id == zonaId)).ToList()
+        });
     }
 
     // R: historial propio (ciudadano)
@@ -54,7 +62,7 @@ public class ReportesController : Controller
     {
         if (ModelState.IsValid)
         {
-            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte enviado. Queda pendiente de revisión por el administrador.";
@@ -77,6 +85,7 @@ public class ReportesController : Controller
         {
             Id = r.Id,
             Direccion = r.Direccion,
+            Motivo = r.Motivo,
             Latitud = r.Latitud,
             Longitud = r.Longitud,
             InicioCorte = SinSegundos(r.InicioCorte),
@@ -91,7 +100,7 @@ public class ReportesController : Controller
     {
         if (ModelState.IsValid)
         {
-            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte actualizado.";
@@ -121,11 +130,20 @@ public class ReportesController : Controller
         return Volver(returnUrl);
     }
 
-    // CUS-04: verificar reporte
+    // CUS-04: verificar / rechazar reporte (o todo su incidente)
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrador")]
-    public async Task<IActionResult> CambiarEstado(int id, EstadoReporte estado, string? returnUrl)
+    public async Task<IActionResult> CambiarEstado(int id, EstadoReporte estado, string? motivo, bool incidente, string? returnUrl)
     {
-        TempData["Mensaje"] = await _servicio.CambiarEstadoAsync(id, estado) ? "Estado actualizado." : "No se encontró el reporte.";
+        TempData["Mensaje"] = await _servicio.CambiarEstadoAsync(id, estado, motivo, incidente) ? "Estado actualizado." : "No se encontró el reporte.";
+        return Volver(returnUrl);
+    }
+
+    // Ya volvió el agua: el ciudadano cierra su reporte; el administrador puede cerrar todo el incidente.
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Resolver(int id, bool incidente, string? returnUrl)
+    {
+        var error = await _servicio.ResolverAsync(id, UsuarioId, EsAdmin, incidente);
+        TempData["Mensaje"] = error ?? (incidente ? "Incidente marcado como resuelto." : "Gracias: registramos que el servicio volvió.");
         return Volver(returnUrl);
     }
 }

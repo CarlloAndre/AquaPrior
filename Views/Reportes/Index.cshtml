@@ -1,35 +1,107 @@
-@model List<ReporteFilaVM>
-@{ ViewData["Title"] = "Reportes"; }
-<section class="v">
-    <h1>Reportes</h1>
-    <p class="lead">Revisa cada reporte y define su estado. Solo los verificados entran en la priorización.</p>
-    <p><a class="btn" asp-action="Crear">Nuevo reporte</a></p>
-    @if (Model.Any())
+@model ColaAdminVM
+@{
+    ViewData["Title"] = "Gestionar reportes";
+    var incs = Model.Cola.Incidentes;
+    var filtros = new (string Clave, string Texto)[]
     {
-        <ul class="list">
-            @foreach (var f in Model)
+        ("pendientes", "Por revisar"), ("verificados", "Verificados"), ("resueltos", "Resueltos"),
+        ("descartados", "Descartados"), ("todos", "Todos")
+    };
+    string Color(AquaPrior.Models.Incidente i) => i.Descartado ? "#9ca3af" : i.Resuelto ? "#16a34a" : i.Estado == EstadoReporte.Verificado ? "#dc2626" : "#f59e0b";
+    var retorno = Context.Request.Path + Context.Request.QueryString;
+}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<section class="v">
+    <h1>Gestionar reportes</h1>
+    <p class="lead">Los reportes cercanos que cuentan el mismo corte se agrupan en un <b>incidente</b>. El sistema ya verifica solo los incidentes con @AquaPrior.Services.ReporteService.VecinosParaVerificarSolo o más vecinos, marca los duplicados de un mismo usuario y cierra los cortes cuando los vecinos avisan que volvió el agua. Aquí solo queda lo dudoso, ordenado por urgencia.</p>
+
+    <form method="get" class="filtros">
+        <div class="chips" role="group" aria-label="Estado">
+            @foreach (var f in filtros)
             {
-                var r = f.Reporte;
-                <li class="it">
+                <a class="chip @(Model.Filtro == f.Clave ? "on" : "")" asp-action="Index" asp-route-filtro="@f.Clave" asp-route-zonaId="@Model.ZonaId">@f.Texto <small>@Model.Cola.Conteos[f.Clave]</small></a>
+            }
+        </div>
+        <input type="hidden" name="filtro" value="@Model.Filtro" />
+        <select name="zonaId" aria-label="Distrito" onchange="this.form.submit()">
+            <option value="">Todos los distritos</option>
+            @foreach (var z in Model.Zonas) { <option value="@z.Value" selected="@z.Selected">@z.Text</option> }
+        </select>
+    </form>
+
+    @if (incs.Any())
+    {
+        <div class="map-panel"><div id="mapa-admin" role="region" aria-label="Ubicación de los incidentes listados"></div></div>
+        <ul class="list">
+            @for (var n = 0; n < incs.Count; n++)
+            {
+                var i = incs[n];
+                var baseId = i.ReporteBaseId;
+                <li class="it incidente" id="inc-@n">
                     <div></div>
                     <div>
-                        <b>@Formato.Zonas(r)</b>
-                        @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
-                        <div class="mt">@r.Direccion · @r.Usuario.Nombre · @Formato.Horas(r.HorasSinServicio) sin servicio</div>
+                        <b>@i.ZonaNombre · @i.Direccion</b>
+                        @if (i.Resuelto) { <span class="badge">Resuelto</span> }
+                        else if (i.Descartado) { <span class="badge">@i.Estado</span> }
+                        else { <span class="badge @(i.Estado == EstadoReporte.Recibido ? "w" : "")">@i.Estado</span> }
+                        @if (i.Reportes.Count > 1) { <span class="badge">@i.Reportes.Count reportes · @i.Usuarios vecino@(i.Usuarios == 1 ? "" : "s")</span> }
+                        <div class="mt">
+                            @(i.Personas > 0 ? i.Personas + " personas afectadas" : "Sin dato de personas") ·
+                            @Formato.Horas(i.Horas) @(i.Resuelto ? "de corte" : "sin servicio")
+                            @if (i.TieneUbicacion) { <text> · <button type="button" class="sm ubicar" data-n="@n">Ubicar en el mapa</button></text> }
+                        </div>
+                        <details class="mt">
+                            <summary>Ver reportes (@i.Reportes.Count)</summary>
+                            <ul class="sublista">
+                                @foreach (var r in i.Reportes)
+                                {
+                                    <li>
+                                        <b>#@r.Id</b> @r.Usuario.Nombre · @r.Direccion · @r.Personas pers. · @Formato.Horas(r.HorasSinServicio)
+                                        <span class="badge">@((r.FinCorte != null && (r.Estado == EstadoReporte.Recibido || r.Estado == EstadoReporte.Verificado)) ? "Resuelto" : r.Estado.ToString())</span>
+                                        <div class="hint"><b>Motivo:</b> @(string.IsNullOrWhiteSpace(r.Motivo) ? "No registrado" : r.Motivo)</div>
+                                        @if (!string.IsNullOrEmpty(r.MotivoEstado)) { <div class="hint"><b>Revisión:</b> @r.MotivoEstado</div> }
+                                        <a class="sm" asp-action="Editar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Editar</a>
+                                        <a class="sm" asp-action="Eliminar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Eliminar</a>
+                                    </li>
+                                }
+                            </ul>
+                        </details>
                     </div>
                     <div class="act">
-                        <form asp-action="CambiarEstado" method="post" class="inline">
-                            <input type="hidden" name="id" value="@r.Id" />
-                            <select name="estado" aria-label="Estado del reporte @r.Id">
-                                @foreach (var e in Enum.GetValues<EstadoReporte>())
-                                {
-                                    <option value="@e" selected="@(e == r.Estado)">@e</option>
-                                }
-                            </select>
-                            <button type="submit" class="sm">Guardar</button>
-                        </form>
-                        <a class="sm" asp-action="Editar" asp-route-id="@r.Id">Editar</a>
-                        <a class="sm" asp-action="Eliminar" asp-route-id="@r.Id">Eliminar</a>
+                        @if (i.Abierto)
+                        {
+                            @if (i.Estado == EstadoReporte.Recibido)
+                            {
+                                <form asp-action="CambiarEstado" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
+                                    <input type="hidden" name="estado" value="Verificado" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Verificar</button>
+                                </form>
+                            }
+                            <form asp-action="CambiarEstado" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
+                                <input type="hidden" name="estado" value="Rechazado" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <select name="motivo" aria-label="Motivo del rechazo">
+                                    <option>Fuera de zona</option>
+                                    <option>Ya reportado</option>
+                                    <option>Sin datos suficientes</option>
+                                    <option>Información inconsistente</option>
+                                </select>
+                                <button type="submit" class="sm">Rechazar</button>
+                            </form>
+                            <form asp-action="Resolver" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Marcar resuelto</button>
+                            </form>
+                        }
+                        else if (i.Descartado)
+                        {
+                            <form asp-action="CambiarEstado" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="false" />
+                                <input type="hidden" name="estado" value="Recibido" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Reabrir</button>
+                            </form>
+                        }
                     </div>
                 </li>
             }
@@ -37,6 +109,38 @@
     }
     else
     {
-        <div class="empty">No hay reportes registrados.</div>
+        <div class="empty">@(Model.Filtro == "pendientes" ? "No hay incidentes por revisar. El sistema se encargó de todo lo demás." : "No hay incidentes en esta vista.")</div>
     }
 </section>
+@if (incs.Any())
+{
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const datos = @Json.Serialize(incs.Select((i, n) => new
+        {
+            n,
+            lat = i.Lat,
+            lng = i.Lng,
+            ok = i.TieneUbicacion,
+            color = Color(i),
+            titulo = i.ZonaNombre + " · " + i.Direccion,
+            detalle = (i.Personas > 0 ? i.Personas + " personas · " : "") + Formato.Horas(i.Horas) + " · " + i.Reportes.Count + " reporte(s)"
+        }));
+        const mapa = L.map('mapa-admin').setView([-8.08, -79.0], 12);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+        const marcas = {}, grupo = [];
+        datos.filter(d => d.ok).forEach(d => {
+            const div = document.createElement('div'), t = document.createElement('strong');
+            t.textContent = d.titulo; div.append(t, document.createElement('br'), d.detalle);
+            const m = L.circleMarker([d.lat, d.lng], { radius: 9, color: '#111827', weight: 1, fillColor: d.color, fillOpacity: 0.85 }).addTo(mapa).bindPopup(div);
+            m.on('click', () => { const el = document.getElementById('inc-' + d.n); if (el) { el.classList.add('resaltado'); setTimeout(() => el.classList.remove('resaltado'), 1800); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } });
+            marcas[d.n] = m; grupo.push(m);
+        });
+        if (grupo.length) mapa.fitBounds(L.featureGroup(grupo).getBounds(), { padding: [30, 30], maxZoom: 16 });
+        document.querySelectorAll('.ubicar').forEach(b => b.addEventListener('click', () => {
+            const m = marcas[b.dataset.n]; if (!m) return;
+            document.getElementById('mapa-admin').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            mapa.flyTo(m.getLatLng(), 17); m.openPopup();
+        }));
+    </script>
+}
