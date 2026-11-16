@@ -1,4 +1,3 @@
-using System.Globalization;
 using AquaPrior.Models;
 using AquaPrior.Repositories;
 
@@ -21,7 +20,7 @@ public class ReporteService
     public static bool PuedeModificar(Reporte r, int usuarioId, bool esAdmin) =>
         esAdmin || (r.UsuarioId == usuarioId && r.Estado == EstadoReporte.Recibido);
 
-    private static string? Validar(string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas)
+    private static string? Validar(string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas, TipoProblema tipo)
     {
         direccion = (direccion ?? "").Trim();
         if (direccion.Length < 4 || direccion.Length > 80) return "La dirección debe tener entre 4 y 80 caracteres.";
@@ -30,7 +29,8 @@ public class ReporteService
         if (!double.IsFinite(latitud) || !double.IsFinite(longitud) || latitud is < -90 or > 90 || longitud is < -180 or > 180)
             return "Marca una ubicación válida en el mapa.";
         if (inicio > DateTime.Now) return "La fecha de inicio no puede estar en el futuro.";
-        if (personas is null or <= 0) return "Indica cuántas personas podrían estar afectadas (mayor a 0).";
+        if (personas is <= 0 or > 1000000) return "El estimado de personas debe ser positivo; puedes dejarlo vacío si no lo sabes.";
+        if (!Enum.IsDefined(tipo)) return "Selecciona un tipo de problema válido.";
         return null;
     }
 
@@ -47,19 +47,14 @@ public class ReporteService
         var zonas = await _zonas.ListarAsync();
         var zona = zonas.FirstOrDefault(z => DistritoLocator.Normalizar(z.Nombre) == normalizado);
         if (zona is null)
-        {
-            // El KML trae un distrito que aún no existe en la base (p. ej. Alto Trujillo): se crea.
-            var nombre = CultureInfo.GetCultureInfo("es-PE").TextInfo.ToTitleCase(normalizado);
-            zona = new Zona { Nombre = nombre };
-            await _zonas.AgregarAsync(zona);
-        }
+            return (null, "El distrito geográfico aún no está habilitado. Solicita al administrador actualizar el catálogo.");
         return (zona.Id, null);
     }
 
     // C: crear el reporte; el sistema genera su línea de distrito a partir de la ubicación
-    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas)
+    public async Task<string?> RegistrarAsync(int usuarioId, string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas, TipoProblema tipo)
     {
-        var error = Validar(direccion, motivo, latitud, longitud, inicio, personas);
+        var error = Validar(direccion, motivo, latitud, longitud, inicio, personas, tipo);
         if (error is not null) return error;
         var (zonaId, errZona) = await ResolverZonaAsync(latitud, longitud);
         if (errZona is not null) return errZona;
@@ -72,6 +67,7 @@ public class ReporteService
             Latitud = latitud,
             Longitud = longitud,
             InicioCorte = inicio,
+            Tipo = tipo,
             Estado = EstadoReporte.Recibido,
             Zonas = new List<ReporteZona> { new() { ZonaId = zonaId!.Value, PersonasAfectadas = personas } }
         };
@@ -81,13 +77,13 @@ public class ReporteService
     }
 
     // U: actualizar; si el punto cambió de distrito, la línea de detalle se recalcula
-    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas)
+    public async Task<string?> ActualizarAsync(int id, int usuarioId, bool esAdmin, string direccion, string motivo, double latitud, double longitud, DateTime inicio, int? personas, TipoProblema tipo)
     {
         var r = await _reportes.ObtenerConDetalleAsync(id);
         if (r is null) return "El reporte no existe.";
         if (!PuedeModificar(r, usuarioId, esAdmin)) return "No puedes modificar este reporte.";
 
-        var error = Validar(direccion, motivo, latitud, longitud, inicio, personas);
+        var error = Validar(direccion, motivo, latitud, longitud, inicio, personas, tipo);
         if (error is not null) return error;
         var (zonaId, errZona) = await ResolverZonaAsync(latitud, longitud);
         if (errZona is not null) return errZona;
@@ -102,6 +98,7 @@ public class ReporteService
         r.Latitud = latitud;
         r.Longitud = longitud;
         r.InicioCorte = inicio;
+        r.Tipo = tipo;
         await _reportes.GuardarAsync();
         if (r.Estado == EstadoReporte.Recibido) await AplicarReglasAutomaticasAsync(r.Id);
         return null;
@@ -109,15 +106,10 @@ public class ReporteService
 
     // ---- Reglas automáticas (el administrador solo interviene en lo dudoso) ----
 
-    /// <summary>Con tantos vecinos distintos reportando el mismo corte, el incidente se verifica solo.</summary>
-    public const int VecinosParaVerificarSolo = 3;
-    /// <summary>Si al menos esta fracción de los reportes de un incidente dice que volvió el agua, se cierra todo el incidente.</summary>
-    public const double FraccionParaCerrarSolo = 0.5;
 
     /// <summary>
-    /// 1) El mismo usuario reportando otra vez el mismo punto: se marca Duplicado.
-    /// 2) Reporte de otro vecino cerca de uno existente: no se descarta, cuenta como confirmación.
-    /// 3) Incidente con varios vecinos distintos, o que ya tenía un reporte verificado: pasa a Verificado.
+    /// Solo detecta duplicados del mismo ciudadano. Múltiples vecinos aportan corroboración,
+    /// pero NUNCA constituyen verificación oficial por sí solos.
     /// </summary>
     private async Task AplicarReglasAutomaticasAsync(int reporteId)
     {
@@ -134,29 +126,16 @@ public class ReporteService
             return;
         }
 
-        var inc = Incidentes.De(todos, r);
-        if (inc is null) return;
-        var yaVerificado = inc.Reportes.Any(x => x.Estado == EstadoReporte.Verificado);
-        if (!yaVerificado && inc.Usuarios < VecinosParaVerificarSolo) return;
-
-        var motivo = yaVerificado
-            ? "Verificado automáticamente: se suma a un incidente ya verificado."
-            : $"Verificado automáticamente: {inc.Usuarios} vecinos reportaron el mismo corte.";
-        foreach (var x in inc.Reportes.Where(x => x.Estado == EstadoReporte.Recibido))
-        {
-            x.Estado = EstadoReporte.Verificado;
-            x.MotivoEstado = motivo;
-        }
-        await _reportes.GuardarAsync();
+        // La verificación requiere una acción explícita del administrador.
     }
 
-    /// <summary>Un vecino indica que volvió el agua (su reporte); el administrador puede cerrar el incidente completo.</summary>
+    /// <summary>El ciudadano confirma su propio suministro; el administrador puede cerrar todos los reportes tras verificar el restablecimiento.</summary>
     public async Task<string?> ResolverAsync(int id, int usuarioId, bool esAdmin, bool incidente)
     {
         var todos = await _reportes.ListarTodosAsync();
         var r = todos.FirstOrDefault(x => x.Id == id);
         if (r is null) return "El reporte no existe.";
-        if (r.FinCorte is not null) return "Este corte ya figura como resuelto.";
+        if (!incidente && r.FinCorte is not null) return "Este problema ya figura como resuelto.";
         if (r.Estado is EstadoReporte.Rechazado or EstadoReporte.Duplicado) return "Un reporte rechazado o duplicado no se puede resolver.";
         if (!esAdmin && r.UsuarioId != usuarioId) return "No puedes modificar este reporte.";
         if (incidente && !esAdmin) return "Solo el administrador puede cerrar un incidente completo.";
@@ -176,10 +155,8 @@ public class ReporteService
         }
         else
         {
+            // El restablecimiento de una vivienda no significa que todo el sector se recuperó.
             Cerrar(r, null);
-            var vigentes = inc.Reportes.Where(x => x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado).ToList();
-            if (vigentes.Count >= 2 && vigentes.Count(x => x.FinCorte is not null) >= vigentes.Count * FraccionParaCerrarSolo)
-                foreach (var x in vigentes) Cerrar(x, "Cerrado automáticamente: la mayoría de los vecinos indicó que volvió el agua.");
         }
         await _reportes.GuardarAsync();
         return null;
@@ -215,13 +192,43 @@ public class ReporteService
             _ => incidentes.Where(Pend)
         };
 
-        var abiertos = incidentes.Where(i => i.Abierto).ToList();
-        double maxP = Math.Max(1.0, abiertos.Select(i => (double)i.Personas).DefaultIfEmpty(0).Max());
-        double maxH = Math.Max(1.0, abiertos.Select(i => i.Horas).DefaultIfEmpty(0).Max());
-        double Urgencia(Incidente i) => 0.5 * i.Personas / maxP + 0.5 * i.Horas / maxH;
+        double Urgencia(Incidente i) => 0.5 * Math.Clamp((double)i.Personas / PrioridadService.ReferenciaPersonas, 0, 1)
+            + 0.5 * Math.Clamp(i.Horas / PrioridadService.ReferenciaHoras, 0, 1);
 
         cola.Incidentes = elegidos.OrderByDescending(i => i.Abierto).ThenByDescending(Urgencia).ThenByDescending(i => i.Inicio).ToList();
         return cola;
+    }
+
+    /// <summary>Solo un administrador puede reabrir reportes cerrados por error.</summary>
+    public async Task<string?> ReabrirAsync(int id, bool incidente)
+    {
+        var todos = await _reportes.ListarTodosAsync();
+        var r = todos.FirstOrDefault(x => x.Id == id);
+        if (r is null) return "El reporte no existe.";
+        var afectados = incidente ? Incidentes.De(todos, r)?.Reportes ?? new List<Reporte> { r } : new List<Reporte> { r };
+        if (!afectados.Any(x => x.FinCorte is not null)) return "No hay reportes resueltos para reabrir.";
+        foreach (var x in afectados.Where(x => x.FinCorte is not null &&
+                                                  x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado))
+        {
+            x.FinCorte = null;
+            x.MotivoEstado = "Reabierto por el administrador. El suministro requiere nueva comprobación.";
+        }
+        await _reportes.GuardarAsync();
+        return null;
+    }
+
+    /// <summary>Acción administrativa explícita de atención operativa.</summary>
+    public async Task<string?> CambiarAtencionAsync(int id, bool incidente, EstadoAtencion atencion)
+    {
+        if (!Enum.IsDefined(atencion)) return "Estado de atención inválido.";
+        var todos = await _reportes.ListarTodosAsync();
+        var r = todos.FirstOrDefault(x => x.Id == id);
+        if (r is null) return "El reporte no existe.";
+        var afectados = incidente ? Incidentes.De(todos, r)?.Reportes ?? new List<Reporte> { r } : new List<Reporte> { r };
+        foreach (var x in afectados.Where(x => x.FinCorte is null && x.Estado == EstadoReporte.Verificado))
+            x.Atencion = atencion;
+        await _reportes.GuardarAsync();
+        return null;
     }
 
     // D: eliminar (las líneas se borran en cascada)
@@ -241,12 +248,14 @@ public class ReporteService
         var r = todos.FirstOrDefault(x => x.Id == id);
         if (r is null) return false;
 
+        if (!Enum.IsDefined(estado)) return false;
         var afectados = incidente ? Incidentes.De(todos, r)!.Reportes : new List<Reporte> { r };
         motivo = (motivo ?? "").Trim();
         if (motivo.Length > 160) motivo = motivo[..160];
         foreach (var x in afectados)
         {
             x.Estado = estado;
+            if (estado == EstadoReporte.Recibido) x.Atencion = EstadoAtencion.Pendiente;
             x.MotivoEstado = estado is EstadoReporte.Rechazado or EstadoReporte.Duplicado
                 ? (motivo.Length > 0 ? motivo : "Sin motivo indicado.")
                 : null;
@@ -264,12 +273,16 @@ public class ReporteService
     {
         var todos = await _reportes.ListarTodosAsync();
         var verificados = todos.Where(r => r.Estado == EstadoReporte.Verificado).ToList();
+        var resueltos = verificados.Where(r => r.FinCorte is not null).ToList();
+        var incidentes = Incidentes.Agrupar(todos);
         return new Estadisticas
         {
             Total = todos.Count,
             Verificados = verificados.Count,
             PorcentajeVerificados = todos.Count == 0 ? 0 : (int)Math.Round(100.0 * verificados.Count / todos.Count),
-            PromedioHoras = verificados.Count == 0 ? 0 : verificados.Average(r => r.HorasSinServicio),
+            PromedioHoras = resueltos.Count == 0 ? 0 : resueltos.Average(r => r.HorasAfectacion),
+            IncidentesActivos = incidentes.Count(i => i.Abierto),
+            IncidentesResueltos = incidentes.Count(i => i.Resuelto),
             PorEstado = Enum.GetValues<EstadoReporte>()
                 .Select(e => new Conteo { Etiqueta = e.ToString(), Cantidad = todos.Count(r => r.Estado == e) }).ToList(),
             PorZona = todos.SelectMany(r => r.Zonas).GroupBy(rz => rz.Zona.Nombre)
