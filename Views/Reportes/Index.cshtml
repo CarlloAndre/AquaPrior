@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <section class="v">
     <h1>Gestionar reportes</h1>
-    <p class="lead">Los reportes cercanos que cuentan el mismo corte se agrupan en un <b>incidente</b>. El sistema ya verifica solo los incidentes con @AquaPrior.Services.ReporteService.VecinosParaVerificarSolo o más vecinos, marca los duplicados de un mismo usuario y cierra los cortes cuando los vecinos avisan que volvió el agua. Aquí solo queda lo dudoso, ordenado por urgencia.</p>
+    <p class="lead">Los avisos cercanos del mismo tipo pueden agruparse en incidentes. Varios vecinos corroboran, pero no verifican oficialmente un aviso. El administrador confirma, registra la atención y cierra incidentes después de comprobar el restablecimiento.</p>
 
     <form method="get" class="filtros">
         <div class="chips" role="group" aria-label="Estado">
@@ -41,13 +41,12 @@
                     <div></div>
                     <div>
                         <b>@i.ZonaNombre · @i.Direccion</b>
-                        @if (i.Resuelto) { <span class="badge">Resuelto</span> }
-                        else if (i.Descartado) { <span class="badge">@i.Estado</span> }
-                        else { <span class="badge @(i.Estado == EstadoReporte.Recibido ? "w" : "")">@i.Estado</span> }
+                        <span class="badge @(i.Estado == EstadoReporte.Recibido ? "w" : "")">@i.Situacion</span>
+                        <span class="badge">@Formato.Tipo(i.Tipo)</span>
                         @if (i.Reportes.Count > 1) { <span class="badge">@i.Reportes.Count reportes · @i.Usuarios vecino@(i.Usuarios == 1 ? "" : "s")</span> }
                         <div class="mt">
                             @(i.Personas > 0 ? i.Personas + " personas afectadas" : "Sin dato de personas") ·
-                            @Formato.Horas(i.Horas) @(i.Resuelto ? "de corte" : "sin servicio")
+                            @Formato.Horas(i.Horas) @(i.Tipo == TipoProblema.CorteTotal ? (i.Resuelto ? "de corte" : "sin servicio") : "de afectación")
                             @if (i.TieneUbicacion) { <text> · <button type="button" class="sm ubicar" data-n="@n">Ubicar en el mapa</button></text> }
                         </div>
                         <details class="mt">
@@ -56,7 +55,7 @@
                                 @foreach (var r in i.Reportes)
                                 {
                                     <li>
-                                        <b>#@r.Id</b> @r.Usuario.Nombre · @r.Direccion · @r.Personas pers. · @Formato.Horas(r.HorasSinServicio)
+                                        <b>#@r.Id</b> @r.Usuario.Nombre · @r.Direccion · @(r.Personas > 0 ? r.Personas + " pers." : "Población no estimada") · @Formato.Duracion(r)
                                         <span class="badge">@((r.FinCorte != null && (r.Estado == EstadoReporte.Recibido || r.Estado == EstadoReporte.Verificado)) ? "Resuelto" : r.Estado.ToString())</span>
                                         <div class="hint"><b>Motivo:</b> @(string.IsNullOrWhiteSpace(r.Motivo) ? "No registrado" : r.Motivo)</div>
                                         @if (!string.IsNullOrEmpty(r.MotivoEstado)) { <div class="hint"><b>Revisión:</b> @r.MotivoEstado</div> }
@@ -70,12 +69,27 @@
                     <div class="act">
                         @if (i.Abierto)
                         {
+                            @if (i.Parcial)
+                            {
+                                <form asp-action="Reabrir" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Reabrir reportes cerrados</button>
+                                </form>
+                            }
                             @if (i.Estado == EstadoReporte.Recibido)
                             {
                                 <form asp-action="CambiarEstado" method="post" class="inline">
                                     <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
                                     <input type="hidden" name="estado" value="Verificado" /><input type="hidden" name="returnUrl" value="@retorno" />
                                     <button type="submit" class="sm">Verificar</button>
+                                </form>
+                            }
+                            @if (i.Estado == EstadoReporte.Verificado && !i.EnAtencion)
+                            {
+                                <form asp-action="CambiarAtencion" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
+                                    <input type="hidden" name="atencion" value="EnAtencion" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Marcar en atención</button>
                                 </form>
                             }
                             <form asp-action="CambiarEstado" method="post" class="inline">
@@ -89,9 +103,19 @@
                                 </select>
                                 <button type="submit" class="sm">Rechazar</button>
                             </form>
-                            <form asp-action="Resolver" method="post" class="inline">
+                            @if (i.Estado == EstadoReporte.Verificado)
+                            {
+                                <form asp-action="Resolver" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Confirmar restablecimiento total</button>
+                                </form>
+                            }
+                        }
+                        else if (i.Resuelto)
+                        {
+                            <form asp-action="Reabrir" method="post" class="inline">
                                 <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
-                                <button type="submit" class="sm">Marcar resuelto</button>
+                                <button type="submit" class="sm">Reabrir incidente</button>
                             </form>
                         }
                         else if (i.Descartado)
@@ -109,7 +133,7 @@
     }
     else
     {
-        <div class="empty">@(Model.Filtro == "pendientes" ? "No hay incidentes por revisar. El sistema se encargó de todo lo demás." : "No hay incidentes en esta vista.")</div>
+        <div class="empty">@(Model.Filtro == "pendientes" ? "No hay incidentes pendientes de verificación." : "No hay incidentes en esta vista.")</div>
     }
 </section>
 @if (incs.Any())

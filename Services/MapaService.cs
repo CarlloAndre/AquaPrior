@@ -5,9 +5,9 @@ using AquaPrior.ViewModels;
 namespace AquaPrior.Services;
 
 /// <summary>
-/// Prepara el mapa de calor: cada reporte aporta un punto en su ubicación exacta con una intensidad
+/// Prepara el mapa de calor: cada incidente consolidado aporta un punto aproximado con una intensidad
 /// que mezcla personas afectadas y horas sin servicio (misma idea que la prioridad SAW, 50 % y 50 %).
-/// Donde se juntan varios reportes los puntos se suman y la zona se ve más roja.
+/// Las incidencias abiertas se consolidan antes de mostrarse para no duplicar la intensidad.
 /// </summary>
 public class MapaService
 {
@@ -33,25 +33,26 @@ public class MapaService
                         && (r.Estado == EstadoReporte.Verificado || r.Estado == EstadoReporte.Recibido))
             .ToList();
 
-        double Personas(Reporte r) => r.Zonas.Select(z => z.PersonasAfectadas ?? 0).DefaultIfEmpty(0).Max();
-
-        double maxP = Math.Max(1.0, usables.Select(Personas).DefaultIfEmpty(0).Max());
-        double maxH = Math.Max(1.0, usables.Select(r => r.HorasSinServicio).DefaultIfEmpty(0).Max());
-
+        // El mapa muestra incidentes consolidados, no un punto por cada vecino.
+        // Las coordenadas se aproximan a ~100 m para no publicar viviendas exactas.
+        var incidentes = Incidentes.Agrupar(usables);
         var vm = new MapaCalorVM();
-        foreach (var r in usables)
+        foreach (var i in incidentes)
         {
-            var baseIntensidad = pesoPersonas * (Personas(r) / maxP) + (1 - pesoPersonas) * (r.HorasSinServicio / maxH);
-            var factor = r.Estado == EstadoReporte.Verificado ? 1.0 : FactorRecibido;
+            var baseIntensidad = pesoPersonas *
+                Math.Clamp((double)i.Personas / PrioridadService.ReferenciaPersonas, 0, 1)
+                + (1 - pesoPersonas) * Math.Clamp(i.Horas / PrioridadService.ReferenciaHoras, 0, 1);
+            var factor = i.Estado == EstadoReporte.Verificado ? 1.0 : FactorRecibido;
             vm.Puntos.Add(new PuntoCalorVM
             {
-                Lat = r.Latitud!.Value,
-                Lng = r.Longitud!.Value,
+                Lat = Math.Round(i.Lat, 3),
+                Lng = Math.Round(i.Lng, 3),
                 Intensidad = Math.Round(Math.Clamp(baseIntensidad * factor, IntensidadMinima, 1.0), 3),
-                Direccion = r.Direccion,
-                Personas = Personas(r) > 0 ? (int)Personas(r) : null,
-                Horas = Math.Round(r.HorasSinServicio, 1),
-                Estado = r.Estado.ToString()
+                Direccion = i.ZonaNombre,
+                Tipo = i.Tipo.ToString(),
+                Personas = i.Personas > 0 ? i.Personas : null,
+                Horas = Math.Round(i.Horas, 1),
+                Estado = i.Situacion
             });
         }
 
@@ -59,9 +60,12 @@ public class MapaService
         vm.Distritos = zonas.Select(z => new MapaVM
         {
             Nombre = z.Nombre,
-            Total = z.ReporteZonas.Count,
-            Verificados = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Verificado),
-            Recibidos = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Recibido)
+            Total = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado is EstadoReporte.Verificado or EstadoReporte.Recibido),
+            Verificados = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado == EstadoReporte.Verificado),
+            Recibidos = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado == EstadoReporte.Recibido)
         }).ToList();
         return vm;
     }

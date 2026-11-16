@@ -9,6 +9,11 @@ public class PrioridadService
     public const double UmbralAlta = 0.70;
     public const double UmbralMedia = 0.40;
 
+    // Referencias fijas y provisionales, independientes de cuántos distritos reportaron.
+    // Deben calibrarse con datos reales antes de usarlas en decisiones operativas.
+    public const double ReferenciaPersonas = 500;
+    public const double ReferenciaHoras = 24;
+
     private readonly IReporteRepository _reportes;
     private readonly IEnumerable<IPrioridadStrategy> _estrategias;
 
@@ -28,7 +33,8 @@ public class PrioridadService
 
         // Consolidación: solo reportes verificados y con el corte aún abierto. Los reportes cercanos se
         // agrupan en incidentes (varios vecinos, un mismo corte) y las personas se suman por incidente, no por reporte.
-        var verificados = (await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado)).Where(r => r.FinCorte is null);
+        var verificados = (await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado))
+            .Where(r => r.FinCorte is null && r.Tipo == TipoProblema.CorteTotal);
         var incidentes = Incidentes.Agrupar(verificados);
         var zonas = new List<ZonaConsolidada>();
         foreach (var g in incidentes.GroupBy(i => i.ZonaNombre))
@@ -40,8 +46,8 @@ public class PrioridadService
         }
 
         var aptas = zonas.Where(z => !estrategia.RequierePersonas || z.Personas.HasValue).ToList();
-        double maxP = Math.Max(1.0, aptas.Select(z => (double)(z.Personas ?? 0)).DefaultIfEmpty(0).Max());
-        double maxH = Math.Max(1.0, aptas.Select(z => z.Horas).DefaultIfEmpty(0).Max());
+        double maxP = ReferenciaPersonas;
+        double maxH = ReferenciaHoras;
 
         var resultado = new ResultadoPrioridad();
         foreach (var z in aptas)

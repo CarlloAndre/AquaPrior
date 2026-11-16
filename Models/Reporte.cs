@@ -14,7 +14,10 @@ public class Reporte
     [Required, StringLength(500)] public string Motivo { get; set; } = "";
     public double? Latitud { get; set; }
     public double? Longitud { get; set; }
+    // La fecha corresponde al inicio del problema, aunque no sea un corte total.
     public DateTime InicioCorte { get; set; }
+    public TipoProblema Tipo { get; set; } = TipoProblema.CorteTotal;
+    public EstadoAtencion Atencion { get; set; } = EstadoAtencion.Pendiente;
     public EstadoReporte Estado { get; set; } = EstadoReporte.Recibido;
     /// <summary>Cuándo volvió el servicio. Mientras sea null el corte sigue abierto y las horas siguen corriendo.</summary>
     public DateTime? FinCorte { get; set; }
@@ -24,7 +27,10 @@ public class Reporte
     public ICollection<ReporteZona> Zonas { get; set; } = new List<ReporteZona>();
 
     [NotMapped]
-    public double HorasSinServicio => Math.Max(0, ((FinCorte ?? DateTime.Now) - InicioCorte).TotalHours);
+    public double HorasAfectacion => Math.Max(0, ((FinCorte ?? DateTime.Now) - InicioCorte).TotalHours);
+
+    [NotMapped]
+    public double HorasSinServicio => Tipo == TipoProblema.CorteTotal ? HorasAfectacion : 0;
 
     [NotMapped]
     public bool EstaAbierto => FinCorte is null;

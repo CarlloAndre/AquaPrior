@@ -45,6 +45,9 @@ public class DistritoLocator
 
     public bool HayPoligonos => _poligonos.Count > 0;
 
+    public bool EsDistritoValido(string nombre) =>
+        !string.IsNullOrWhiteSpace(nombre) && _poligonos.Any(p => p.Nombre == Normalizar(nombre));
+
     public static string Normalizar(string s)
     {
         var d = s.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);

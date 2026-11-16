@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Mis reportes"; }
 <section class="v">
     <h1>Mis reportes</h1>
-    <p class="lead">Historial de las interrupciones que has reportado. Puedes editar o eliminar un reporte mientras esté en estado Recibido.</p>
+    <p class="lead">Historial de los problemas del suministro que has reportado. Puedes editar o eliminar un reporte mientras esté en estado Recibido.</p>
     <p><a class="btn" asp-action="Crear">Nuevo reporte</a></p>
     @if (Model.Any())
     {
@@ -15,7 +15,7 @@
                         <b>@Formato.Zonas(r)</b>
                         @if (r.FinCorte is not null && (r.Estado == EstadoReporte.Recibido || r.Estado == EstadoReporte.Verificado)) { <span class="badge">Resuelto</span> }
                         else { <span class="badge">@r.Estado</span> }
-                        <div class="mt">@r.Direccion · @Formato.Horas(r.HorasSinServicio) @(r.FinCorte is null ? "sin servicio" : "de corte")</div>
+                        <div class="mt">@r.Direccion · @Formato.Tipo(r.Tipo) · @Formato.Duracion(r)</div>
                         <div class="mt"><b>Motivo:</b> @(string.IsNullOrWhiteSpace(r.Motivo) ? "No registrado" : r.Motivo)</div>
                         @if (!string.IsNullOrEmpty(r.MotivoEstado)) { <div class="hint"><b>Revisión:</b> @r.MotivoEstado</div> }
                     </div>
@@ -24,7 +24,7 @@
                         {
                             <form asp-action="Resolver" method="post" class="inline">
                                 <input type="hidden" name="id" value="@r.Id" />
-                                <button type="submit" class="sm">Ya volvió el agua</button>
+                                <button type="submit" class="sm">Se solucionó en mi vivienda</button>
                             </form>
                         }
                         @if (r.Estado == EstadoReporte.Recibido)

@@ -43,6 +43,12 @@ namespace AquaPrior.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Atencion")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
 

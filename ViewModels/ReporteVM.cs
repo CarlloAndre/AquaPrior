@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using AquaPrior.Models;
 
 namespace AquaPrior.ViewModels;
 
@@ -24,12 +25,14 @@ public class ReporteVM
     [Display(Name = "Motivo del reporte")]
     public string Motivo { get; set; } = "";
 
-    [Required(ErrorMessage = "Indica cuándo empezó el corte.")]
-    [Display(Name = "Inicio del corte")]
+    [Required(ErrorMessage = "Indica cuándo empezó el problema.")]
+    [Display(Name = "Inicio del problema")]
     public DateTime? InicioCorte { get; set; }
 
-    [Required(ErrorMessage = "Indica cuántas personas podrían estar afectadas.")]
-    [Range(1, 1000000, ErrorMessage = "Las personas afectadas deben ser un número mayor a 0.")]
+    [Range(1, 1000000, ErrorMessage = "El estimado debe ser positivo. Déjalo vacío si no lo sabes.")]
     [Display(Name = "Posibles personas afectadas")]
     public int? PersonasAfectadas { get; set; }
+
+    [Display(Name = "Tipo de problema")]
+    public TipoProblema Tipo { get; set; } = TipoProblema.CorteTotal;
 }

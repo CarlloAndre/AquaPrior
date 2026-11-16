@@ -6,7 +6,12 @@ namespace AquaPrior.Services;
 public class ZonaService
 {
     private readonly IZonaRepository _zonas;
-    public ZonaService(IZonaRepository zonas) => _zonas = zonas;
+    private readonly DistritoLocator _locator;
+    public ZonaService(IZonaRepository zonas, DistritoLocator locator)
+    {
+        _zonas = zonas;
+        _locator = locator;
+    }
 
     public Task<List<Zona>> ListarAsync() => _zonas.ListarConReportesAsync();
     public Task<Zona?> ObtenerAsync(int id) => _zonas.ObtenerConReportesAsync(id);
@@ -14,6 +19,7 @@ public class ZonaService
     private async Task<string?> ValidarAsync(string nombre, int? exceptoId)
     {
         if (nombre.Length < 2 || nombre.Length > 80) return "El nombre debe tener entre 2 y 80 caracteres.";
+        if (!_locator.EsDistritoValido(nombre)) return "Ese distrito no está definido en el mapa territorial oficial del sistema.";
         if (await _zonas.NombreEnUsoAsync(nombre, exceptoId)) return "Ya existe un distrito con ese nombre.";
         return null;
     }
@@ -30,8 +36,10 @@ public class ZonaService
     public async Task<string?> ActualizarAsync(int id, string nombre)
     {
         nombre = (nombre ?? "").Trim();
-        var z = await _zonas.ObtenerAsync(id);
+        var z = await _zonas.ObtenerConReportesAsync(id);
         if (z is null) return "El distrito no existe.";
+        if (z.ReporteZonas.Count > 0 && DistritoLocator.Normalizar(z.Nombre) != DistritoLocator.Normalizar(nombre))
+            return "No se puede renombrar un distrito que ya tiene reportes vinculados.";
         var error = await ValidarAsync(nombre, id);
         if (error is not null) return error;
         z.Nombre = nombre;

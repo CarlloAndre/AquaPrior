@@ -13,9 +13,10 @@ public class Incidente
     public double Lng => Reportes.Where(r => r.Longitud.HasValue).Select(r => r.Longitud!.Value).DefaultIfEmpty(0).Average();
 
     public int Usuarios => Reportes.Select(r => r.UsuarioId).Distinct().Count();
+    public TipoProblema Tipo => Reportes[0].Tipo;
     /// <summary>Los vecinos del mismo incidente viven en el mismo entorno: se toma el mayor estimado, no la suma.</summary>
     public int Personas => Reportes.Select(r => r.Personas).DefaultIfEmpty(0).Max();
-    public double Horas => Reportes.Select(r => r.HorasSinServicio).DefaultIfEmpty(0).Max();
+    public double Horas => Reportes.Select(r => r.HorasAfectacion).DefaultIfEmpty(0).Max();
     public DateTime Inicio => Reportes.Min(r => r.InicioCorte);
 
     private static bool Vigente(Reporte r) => r.Estado == EstadoReporte.Recibido || r.Estado == EstadoReporte.Verificado;
@@ -24,6 +25,10 @@ public class Incidente
     public bool Activo => Reportes.Any(Vigente);
     public bool Abierto => Reportes.Any(r => Vigente(r) && r.FinCorte is null);
     public bool Resuelto => Activo && !Abierto;
+    public bool Parcial => Abierto && Reportes.Any(r => Vigente(r) && r.FinCorte is not null);
+    public bool EnAtencion => Abierto && Reportes.Any(r => Vigente(r) && r.Atencion == EstadoAtencion.EnAtencion);
+    public string Situacion => Descartado ? "Descartado" : Resuelto ? "Resuelto" : Parcial ? "Restablecimiento parcial"
+        : Estado == EstadoReporte.Recibido ? "Pendiente de verificación" : EnAtencion ? "En atención" : "Confirmado, pendiente de atención";
     public bool Descartado => !Activo;
 
     public EstadoReporte Estado =>

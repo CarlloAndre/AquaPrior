@@ -1,8 +1,8 @@
 @model ReporteVM
-@{ ViewData["Title"] = "Reportar una interrupción"; }
+@{ ViewData["Title"] = "Reportar un problema con el agua"; }
 <section class="v">
-    <h1>Reportar una interrupción</h1>
-    <p class="lead">Marca en el mapa el punto exacto donde se interrumpió el servicio; el distrito se detecta solo. El administrador revisará tu reporte antes de usarlo en la priorización.</p>
+    <h1>Reportar un problema del suministro</h1>
+    <p class="lead">Marca dónde ocurre el problema, indica su tipo y describe la situación. El distrito se detecta automáticamente y el administrador podrá revisar el aviso.</p>
     <form class="card" asp-action="Crear" method="post" novalidate>
         <partial name="_CamposReporte" model="Model" />
         <button class="btn" type="submit">Enviar reporte</button>

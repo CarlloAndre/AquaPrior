@@ -6,10 +6,10 @@
 <section class="v">
 <span class="eyebrow">PANORAMA TERRITORIAL</span>
 <h1>Mapa de reportes</h1>
-<p class="lead">Cada reporte se ubica en su punto exacto. Las zonas donde se juntan más reportes, con más personas afectadas y más horas sin agua, se ven más rojas.</p>
+<p class="lead">Cada punto representa un incidente agrupado, con ubicación aproximada para proteger la privacidad de los vecinos. La intensidad considera alcance y duración del problema.</p>
 <div class="map-panel"><div id="mapa" role="region" aria-label="Mapa de calor de reportes de interrupción del agua"></div>
 <div class="heat-legend" aria-hidden="true"><span>Menor afectación</span><i></i><span>Mayor afectación</span></div>
-<p class="map-caption">La intensidad de cada punto combina personas afectadas y horas sin servicio (50 % y 50 %); los reportes sin verificar pesan menos. Haz clic en un punto para ver el detalle o en un distrito para ver sus totales. Límites distritales: INEI; capa publicada por Gobierno Regional La Libertad, “Manejo Sostenible y Restauración de bosque seco de la costa norte del Perú (Bosque Seco)”.</p></div>
+<p class="map-caption">La intensidad de cada incidente combina alcance estimado y horas de afectación (50 % y 50 %); los avisos pendientes pesan menos. Los puntos son aproximados. Haz clic en un distrito para ver sus totales. Límites distritales: INEI; capa publicada por Gobierno Regional La Libertad, “Manejo Sostenible y Restauración de bosque seco de la costa norte del Perú (Bosque Seco)”.</p></div>
 @if (!Model.Puntos.Any())
 {
     <p class="hint">Aún no hay reportes con ubicación para mostrar.</p>
@@ -53,14 +53,15 @@
         }).addTo(mapa);
     }
 
-    // Punto exacto de cada reporte, con su detalle.
+    // Ubicación generalizada de cada incidente, sin exponer direcciones particulares.
     puntos.forEach(p => {
         const div = document.createElement('div'), t = document.createElement('strong');
         t.textContent = p.direccion;
         div.append(t, document.createElement('br'),
-            'Personas afectadas: ' + (p.personas ?? 'sin dato'), document.createElement('br'),
-            'Horas sin servicio: ' + p.horas, document.createElement('br'),
-            'Estado: ' + p.estado);
+            'Personas estimadas: ' + (p.personas ?? 'sin dato'), document.createElement('br'),
+            'Horas de afectación: ' + p.horas, document.createElement('br'),
+            'Tipo: ' + p.tipo, document.createElement('br'),
+            'Situación: ' + p.estado);
         L.circleMarker([p.lat, p.lng], { radius: 4, color: '#1f2937', weight: 1, fillColor: '#ffffff', fillOpacity: 0.9 })
             .addTo(mapa).bindPopup(div);
     });
