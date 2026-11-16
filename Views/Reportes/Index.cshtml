@@ -96,10 +96,13 @@
                                 </select>
                                 <button type="submit" class="sm">Rechazar</button>
                             </form>
-                            <form asp-action="Resolver" method="post" class="inline">
-                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
-                                <button type="submit" class="sm">Marcar resuelto</button>
-                            </form>
+                            @if (i.Estado == EstadoReporte.Verificado)
+                            {
+                                <form asp-action="Resolver" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Confirmar restablecimiento total</button>
+                                </form>
+                            }
                         }
                         else if (i.Resuelto)
                         {
@@ -123,7 +126,7 @@
     }
     else
     {
-        <div class="empty">@(Model.Filtro == "pendientes" ? "No hay incidentes por revisar. El sistema se encargó de todo lo demás." : "No hay incidentes en esta vista.")</div>
+        <div class="empty">@(Model.Filtro == "pendientes" ? "No hay incidentes pendientes de verificación." : "No hay incidentes en esta vista.")</div>
     }
 </section>
 @if (incs.Any())
