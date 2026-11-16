@@ -10,17 +10,17 @@ public static class Incidentes
     public static List<Incidente> Agrupar(IEnumerable<Reporte> reportes)
     {
         var lista = reportes.ToList();
-        var padre = Enumerable.Range(0, lista.Count).ToArray();
-        int Raiz(int x) { while (padre[x] != x) { padre[x] = padre[padre[x]]; x = padre[x]; } return x; }
+        // Enlace completo: cada reporte debe coincidir con TODOS los del grupo.
+        // Evita unir A y C a través de B cuando A y C representan puntos muy separados.
+        var grupos = new List<List<Reporte>>();
+        foreach (var reporte in lista.OrderBy(r => r.Id))
+        {
+            var grupo = grupos.FirstOrDefault(g => g.All(r => Unibles(r, reporte)));
+            if (grupo is null) grupos.Add(new List<Reporte> { reporte });
+            else grupo.Add(reporte);
+        }
 
-        for (int i = 0; i < lista.Count; i++)
-            for (int j = i + 1; j < lista.Count; j++)
-                if (Unibles(lista[i], lista[j])) padre[Raiz(i)] = Raiz(j);
-
-        return lista.Select((r, i) => (r, raiz: Raiz(i)))
-            .GroupBy(x => x.raiz)
-            .Select(g => new Incidente { Reportes = g.Select(x => x.r).OrderBy(r => r.Id).ToList() })
-            .ToList();
+        return grupos.Select(g => new Incidente { Reportes = g }).ToList();
     }
 
     public static Incidente? De(IEnumerable<Reporte> reportes, Reporte reporte) =>
@@ -30,7 +30,10 @@ public static class Incidentes
 
     public static bool Unibles(Reporte a, Reporte b)
     {
-        if (!Vigente(a) || !Vigente(b)) return false;
+        if (!Vigente(a) || !Vigente(b) || a.Tipo != b.Tipo) return false;
+        // Dos reportes en distritos distintos no se fusionan automáticamente.
+        if (a.Zonas.Count != 0 && b.Zonas.Count != 0 &&
+            !a.Zonas.Any(za => b.Zonas.Any(zb => za.ZonaId == zb.ZonaId))) return false;
         if (a.Latitud is null || a.Longitud is null || b.Latitud is null || b.Longitud is null) return false;
         if (DistanciaMetros(a.Latitud.Value, a.Longitud.Value, b.Latitud.Value, b.Longitud.Value) > RadioMetros) return false;
         var ahora = DateTime.Now;
