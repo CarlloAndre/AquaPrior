@@ -15,7 +15,9 @@ public class PuntoCalorVM
     public double Lat { get; set; }
     public double Lng { get; set; }
     public double Intensidad { get; set; }
+    // Etiqueta generalizada: nunca la dirección residencial exacta en el mapa público.
     public string Direccion { get; set; } = "";
+    public string Tipo { get; set; } = "";
     public int? Personas { get; set; }
     public double Horas { get; set; }
     public string Estado { get; set; } = "";
