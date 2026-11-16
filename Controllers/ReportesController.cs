@@ -62,10 +62,10 @@ public class ReportesController : Controller
     {
         if (ModelState.IsValid)
         {
-            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas, vm.Tipo);
             if (error is null)
             {
-                TempData["Mensaje"] = "Reporte enviado. Queda pendiente de revisión por el administrador.";
+                TempData["Mensaje"] = "Reporte enviado. Será revisado por el administrador.";
                 return Volver(vm.ReturnUrl);
             }
             ModelState.AddModelError(string.Empty, error);
@@ -89,6 +89,7 @@ public class ReportesController : Controller
             Latitud = r.Latitud,
             Longitud = r.Longitud,
             InicioCorte = SinSegundos(r.InicioCorte),
+            Tipo = r.Tipo,
             ReturnUrl = returnUrl,
             PersonasAfectadas = r.Zonas.Select(z => z.PersonasAfectadas).Max()
         };
@@ -100,7 +101,7 @@ public class ReportesController : Controller
     {
         if (ModelState.IsValid)
         {
-            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas);
+            var error = await _servicio.ActualizarAsync(vm.Id, UsuarioId, EsAdmin, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas, vm.Tipo);
             if (error is null)
             {
                 TempData["Mensaje"] = "Reporte actualizado.";
@@ -138,7 +139,22 @@ public class ReportesController : Controller
         return Volver(returnUrl);
     }
 
-    // Ya volvió el agua: el ciudadano cierra su reporte; el administrador puede cerrar todo el incidente.
+    // Seguimiento administrativo: los ciudadanos no pueden registrar atención oficial.
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> CambiarAtencion(int id, bool incidente, EstadoAtencion atencion, string? returnUrl)
+    {
+        TempData["Mensaje"] = await _servicio.CambiarAtencionAsync(id, incidente, atencion) ?? "Atención actualizada.";
+        return Volver(returnUrl);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Reabrir(int id, bool incidente, string? returnUrl)
+    {
+        TempData["Mensaje"] = await _servicio.ReabrirAsync(id, incidente) ?? "Reporte reabierto para comprobación.";
+        return Volver(returnUrl);
+    }
+
+    // El ciudadano confirma su reporte; el administrador puede cerrar todo el incidente.
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Resolver(int id, bool incidente, string? returnUrl)
     {
