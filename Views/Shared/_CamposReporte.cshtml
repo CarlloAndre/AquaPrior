@@ -9,23 +9,32 @@
 <input asp-for="Latitud" type="hidden" id="Latitud" />
 <input asp-for="Longitud" type="hidden" id="Longitud" />
 <fieldset>
-    <legend>Ubicación exacta del reporte</legend>
-    <p class="hint">Escribe la dirección y haz clic en el punto exacto en el mapa. El marcador guarda las coordenadas del reporte.</p>
+    <legend>Ubicación del problema</legend>
+    <p class="hint">Marca la ubicación en el mapa. La dirección exacta solo estará disponible para personal autorizado; el mapa público la mostrará aproximada.</p>
     <div class="map-panel"><div id="mapa-ubicacion" role="region" aria-label="Selecciona la ubicación exacta del reporte en el mapa"></div><p id="estado-ubicacion" class="map-caption" aria-live="polite">Haz clic en el mapa para colocar el marcador.</p></div>
     <span asp-validation-for="Latitud" class="err"></span>
     <span asp-validation-for="Longitud" class="err"></span>
 </fieldset>
+<label>Tipo de problema
+    <select asp-for="Tipo">
+        <option value="CorteTotal">Interrupción total</option>
+        <option value="BajaPresion">Baja presión</option>
+        <option value="CalidadAgua">Agua turbia, mal olor u otro problema de calidad</option>
+        <option value="Otro">Otro problema del servicio</option>
+    </select>
+    <span asp-validation-for="Tipo" class="err"></span>
+</label>
 <label>Motivo del reporte
     <textarea asp-for="Motivo" rows="4" maxlength="500" placeholder="Describe qué ocurre, por ejemplo: corte total, baja presión o agua turbia."></textarea>
     <span asp-validation-for="Motivo" class="err"></span>
 </label>
-<label>Inicio del corte
+<label>Inicio del problema
     <input asp-for="InicioCorte" type="datetime-local" />
     <span asp-validation-for="InicioCorte" class="err"></span>
 </label>
-<label>Posibles personas afectadas
-    <input asp-for="PersonasAfectadas" type="number" min="1" placeholder="Ej. 40 (personas que se quedaron sin agua en tu entorno)" />
-    <span class="hint">Con este dato y las horas sin servicio se calcula qué tan prioritaria es la zona.</span>
+<label>Personas afectadas aproximadamente (opcional)
+    <input asp-for="PersonasAfectadas" type="number" min="1" placeholder="Si no sabes cuántas, déjalo vacío" />
+    <span class="hint">No inventes una cifra: el dato es opcional y deberá corroborarse para tomar decisiones operativas.</span>
     <span asp-validation-for="PersonasAfectadas" class="err"></span>
 </label>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
