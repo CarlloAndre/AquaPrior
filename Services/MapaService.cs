@@ -60,9 +60,12 @@ public class MapaService
         vm.Distritos = zonas.Select(z => new MapaVM
         {
             Nombre = z.Nombre,
-            Total = z.ReporteZonas.Count,
-            Verificados = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Verificado),
-            Recibidos = z.ReporteZonas.Count(rz => rz.Reporte.Estado == EstadoReporte.Recibido)
+            Total = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado is EstadoReporte.Verificado or EstadoReporte.Recibido),
+            Verificados = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado == EstadoReporte.Verificado),
+            Recibidos = z.ReporteZonas.Count(rz => rz.Reporte.FinCorte is null &&
+                rz.Reporte.Estado == EstadoReporte.Recibido)
         }).ToList();
         return vm;
     }
