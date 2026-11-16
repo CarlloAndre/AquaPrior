@@ -35,6 +35,8 @@ public class Estadisticas
 {
     public int Total { get; set; }
     public int Verificados { get; set; }
+    public int IncidentesActivos { get; set; }
+    public int IncidentesResueltos { get; set; }
     public int PorcentajeVerificados { get; set; }
     public double PromedioHoras { get; set; }
     public List<Conteo> PorEstado { get; set; } = new();
