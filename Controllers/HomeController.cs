@@ -18,11 +18,16 @@ public class HomeController : Controller
     }
 
     // CUS-02: consultar zonas afectadas (visitante, ciudadano o administrador)
-    public async Task<IActionResult> Index() => View(new HomeVM
+    public async Task<IActionResult> Index()
     {
-        Resultado = await _prioridad.CalcularAsync(),
-        Pendientes = await _reportes.ContarPorEstadoAsync(EstadoReporte.Recibido)
-    });
+        var reportes = await _reportes.ListarTodosAsync();
+        var pendientes = Incidentes.Agrupar(reportes.Where(r => r.Estado == EstadoReporte.Recibido));
+        return View(new HomeVM
+        {
+            Resultado = await _prioridad.CalcularAsync(),
+            Pendientes = pendientes.Sum(i => i.Reportes.Select(r => r.UsuarioId).Distinct().Count())
+        });
+    }
 
     public IActionResult Error() => View();
 }

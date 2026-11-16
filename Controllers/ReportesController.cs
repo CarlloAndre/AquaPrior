@@ -65,7 +65,7 @@ public class ReportesController : Controller
             var error = await _servicio.RegistrarAsync(UsuarioId, vm.Direccion, vm.Motivo, vm.Latitud!.Value, vm.Longitud!.Value, vm.InicioCorte!.Value, vm.PersonasAfectadas, vm.Tipo);
             if (error is null)
             {
-                TempData["Mensaje"] = "Reporte enviado. Será revisado por el administrador.";
+                TempData["Mensaje"] = "Reporte recibido. El sistema lo compara con los avisos cercanos para corroborar el problema automáticamente.";
                 return Volver(vm.ReturnUrl);
             }
             ModelState.AddModelError(string.Empty, error);

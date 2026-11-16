@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "Priorización de zonas"; }
 <section class="v">
     <h1>Priorización de zonas</h1>
-    <p class="lead">Solo se priorizan interrupciones totales confirmadas que siguen abiertas. Las referencias, pesos y umbrales son provisionales y deben validarse antes de aplicarlos operativamente.</p>
+    <p class="lead">Se ordenan los cortes totales abiertos y confirmados. El puntaje compara las zonas con reportes activos y combina duración y población estimada.</p>
     <form class="ctl" asp-action="Prioridad" method="get">
         <label>Regla de cálculo
             <select name="clave">
@@ -18,7 +18,7 @@
         </label>
         <button class="btn" type="submit">Recalcular</button>
     </form>
-    <p class="hint">Puntaje = peso₁ × (personas ÷ 500) + peso₂ × (horas ÷ 24), cada término con máximo 1; sin población estimada se usa solo duración. Referencias provisionales. Alta desde @((int)(PrioridadService.UmbralAlta * 100)), media desde @((int)(PrioridadService.UmbralMedia * 100)).</p>
+    <p class="hint">Puntaje de 0 a 100. Cada factor se compara con la zona activa de mayor valor. Sin población estimada, se usa solo la duración. Alta desde @((int)(PrioridadService.UmbralAlta * 100)) y media desde @((int)(PrioridadService.UmbralMedia * 100)).</p>
 
     @if (Model.Resultado.Ranking.Any())
     {
@@ -31,7 +31,7 @@
     }
     else
     {
-        <div class="empty">No hay zonas con datos suficientes. Verifica reportes primero.</div>
+        <div class="empty">No hay cortes totales abiertos y verificados para calcular prioridades.</div>
     }
     @if (Model.Resultado.SinDatos.Any())
     {

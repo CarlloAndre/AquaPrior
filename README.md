@@ -27,7 +27,9 @@ Cuando cambies una entidad: `Add-Migration NombreDelCambio` y `Update-Database`.
 dotnet restore
 dotnet run
 ```
-Al iniciar, la aplicación aplica las migraciones y crea los 12 distritos y una cuenta de administrador si no existen. No carga reportes ni ciudadanos de ejemplo.
+Al iniciar, la aplicación aplica las migraciones, crea los 12 distritos y una cuenta de administrador si no existen. En Development carga reportes sintéticos repartidos por Trujillo y otros distritos, con varios focos en Víctor Larco Herrera. Los agrega una sola vez.
+
+Los vecinos de prueba usan los correos `prueba1@aquaprior.local` a `prueba8@aquaprior.local` y la contraseña `Prueba123!`.
 
 ## Cuenta inicial
 | Rol | Correo | Contraseña |

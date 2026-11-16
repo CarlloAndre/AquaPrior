@@ -25,9 +25,14 @@ public class Incidente
     public bool Activo => Reportes.Any(Vigente);
     public bool Abierto => Reportes.Any(r => Vigente(r) && r.FinCorte is null);
     public bool Resuelto => Activo && !Abierto;
-    public bool Parcial => Abierto && Reportes.Any(r => Vigente(r) && r.FinCorte is not null);
+    public int VecinosActivos => Reportes.Where(Vigente).Select(r => r.UsuarioId).Distinct().Count();
+    public int VecinosRestablecidos => Reportes.Where(r => Vigente(r) && r.FinCorte is not null)
+        .Select(r => r.UsuarioId).Distinct().Count();
+    public int PorcentajeRestablecido => VecinosActivos == 0 ? 0
+        : (int)Math.Round(100.0 * VecinosRestablecidos / VecinosActivos);
+    public bool Parcial => Abierto && VecinosRestablecidos > 0;
     public bool EnAtencion => Abierto && Reportes.Any(r => Vigente(r) && r.Atencion == EstadoAtencion.EnAtencion);
-    public string Situacion => Descartado ? "Descartado" : Resuelto ? "Resuelto" : Parcial ? "Restablecimiento parcial"
+    public string Situacion => Descartado ? "Descartado" : Resuelto ? "Resuelto" : Parcial ? $"Restablecimiento {PorcentajeRestablecido}%"
         : Estado == EstadoReporte.Recibido ? "Pendiente de verificación" : EnAtencion ? "En atención" : "Confirmado, pendiente de atención";
     public bool Descartado => !Activo;
 

@@ -33,6 +33,7 @@ public class ZonasController : Controller
         return View(new ZonaDetalleVM
         {
             Zona = zona,
+            Incidentes = Incidentes.Agrupar(reportes),
             Reportes = lineas.Select(rz => new ReporteFilaVM
             {
                 Reporte = rz.Reporte,

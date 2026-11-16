@@ -7,48 +7,94 @@
     <p class="hint"><a asp-action="Index">← Distritos</a></p>
     <div class="card">
         <h1>@Model.Zona.Nombre</h1>
-        <p class="lead" style="margin-bottom:0">@Model.Reportes.Count reporte@(Model.Reportes.Count == 1 ? "" : "s") que lo afecta@(Model.Reportes.Count == 1 ? "" : "n") · @Model.Verificados verificado@(Model.Verificados == 1 ? "" : "s")</p>
+        <p class="lead" style="margin-bottom:0">@Model.Reportes.Count reporte(s) agrupados en @Model.Incidentes.Count incidente(s) · @Model.Verificados verificado(s)</p>
         <p class="act" style="margin-top:12px">
             <a class="sm" asp-action="Editar" asp-route-id="@Model.Zona.Id">Editar distrito</a>
             <a class="sm" asp-action="Eliminar" asp-route-id="@Model.Zona.Id">Eliminar distrito</a>
         </p>
     </div>
-
-    <h2 style="margin-top:28px">Reportes que afectan a este distrito</h2>
+    <h2 style="margin-top:28px">Incidentes del distrito</h2>
+    <p>Los reportes cercanos del mismo problema se agrupan para que puedas gestionarlos juntos.</p>
     <p><a class="btn" asp-controller="Reportes" asp-action="Crear" asp-route-returnUrl="@retorno">Registrar un reporte</a></p>
-    @if (Model.Reportes.Any())
+    @if (Model.Incidentes.Any())
     {
         <ul class="list">
-            @foreach (var f in Model.Reportes)
-            {
-                var r = f.Reporte;
-                <li class="it">
-                    <div></div>
-                    <div>
-                        <b>@r.Direccion</b> <span class="badge">@r.Estado</span>
-                        @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
-                        <div class="mt">
-                            @r.Usuario.Nombre · @Formato.Tipo(r.Tipo) · @Formato.Duracion(r) ·
-                            @(f.PersonasEnZona is int p ? $"{p} personas estimadas" : "sin estimado de personas")
-                        </div>
-                    </div>
-                    <div class="act">
-                        <form asp-controller="Reportes" asp-action="CambiarEstado" method="post" class="inline">
-                            <input type="hidden" name="id" value="@r.Id" />
-                            <input type="hidden" name="returnUrl" value="@retorno" />
-                            <select name="estado" aria-label="Estado del reporte @r.Id">
-                                @foreach (var e in Enum.GetValues<EstadoReporte>())
-                                {
-                                    <option value="@e" selected="@(e == r.Estado)">@e</option>
-                                }
-                            </select>
-                            <button type="submit" class="sm">Guardar</button>
+        @foreach (var i in Model.Incidentes.OrderByDescending(i => i.Abierto).ThenByDescending(i => i.Inicio))
+        {
+            var baseId = i.ReporteBaseId;
+            <li class="it">
+                <div></div>
+                <div>
+                    <b>@i.Direccion</b> <span class="badge @(i.Estado == EstadoReporte.Recibido ? "w" : "")">@i.Situacion</span>
+                    <span class="badge">@Formato.Tipo(i.Tipo)</span>
+                    @if (i.Estado == EstadoReporte.Verificado && i.Abierto) { <span class="badge">Restablecimiento: @i.VecinosRestablecidos/@i.VecinosActivos vecinos</span> }
+                    <div class="mt">@i.Reportes.Count reporte(s) · @i.Usuarios vecino(s) · @(i.Personas > 0 ? $"{i.Personas} personas estimadas" : "sin estimado de personas") · @Formato.Horas(i.Horas)</div>
+                    @if (i.Estado == EstadoReporte.Verificado && i.Reportes.Any(r => r.MotivoEstado?.StartsWith("Verificado automáticamente:") == true))
+                    {
+                        <div class="hint">Verificación automática por corroboración de vecinos.</div>
+                    }
+                    <details class="mt">
+                        <summary>Ver reportes y motivos</summary>
+                        <ul class="sublista">
+                        @foreach (var r in i.Reportes)
+                        {
+                            var fila = Model.Reportes.First(f => f.Reporte.Id == r.Id);
+                            <li>
+                                <b>#@r.Id</b> @r.Usuario.Nombre · @r.Direccion · @Formato.Tipo(r.Tipo)
+                                <span class="badge">@((r.FinCorte != null && (r.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado)) ? "Resuelto" : r.Estado.ToString())</span>
+                                @if (fila.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
+                                <div class="hint">@r.Motivo</div>
+                                @if (!string.IsNullOrWhiteSpace(r.MotivoEstado)) { <div class="hint">Revisión: @r.MotivoEstado</div> }
+                                <a class="sm" asp-controller="Reportes" asp-action="Editar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Editar reporte</a>
+                            </li>
+                        }
+                        </ul>
+                    </details>
+                </div>
+                <div class="act">
+                    @if (i.Abierto)
+                    {
+                        @if (i.Estado == EstadoReporte.Recibido)
+                        {
+                            <form asp-controller="Reportes" asp-action="CambiarEstado" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
+                                <input type="hidden" name="estado" value="Verificado" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Verificar incidente</button>
+                            </form>
+                        }
+                        @if (i.Estado == EstadoReporte.Verificado && !i.EnAtencion)
+                        {
+                            <form asp-controller="Reportes" asp-action="CambiarAtencion" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" />
+                                <input type="hidden" name="atencion" value="EnAtencion" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Marcar en atención</button>
+                            </form>
+                        }
+                        @if (i.Estado == EstadoReporte.Verificado)
+                        {
+                            <form asp-controller="Reportes" asp-action="Resolver" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Confirmar restablecimiento</button>
+                            </form>
+                        }
+                        @if (i.Parcial)
+                        {
+                            <form asp-controller="Reportes" asp-action="Reabrir" method="post" class="inline">
+                                <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                <button type="submit" class="sm">Reabrir reportes cerrados</button>
+                            </form>
+                        }
+                    }
+                    else if (i.Resuelto)
+                    {
+                        <form asp-controller="Reportes" asp-action="Reabrir" method="post" class="inline">
+                            <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                            <button type="submit" class="sm">Reabrir incidente</button>
                         </form>
-                        <a class="sm" asp-controller="Reportes" asp-action="Editar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Editar</a>
-                        <a class="sm" asp-controller="Reportes" asp-action="Eliminar" asp-route-id="@r.Id" asp-route-returnUrl="@retorno">Eliminar</a>
-                    </div>
-                </li>
-            }
+                    }
+                </div>
+            </li>
+        }
         </ul>
     }
     else

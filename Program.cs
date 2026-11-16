@@ -45,6 +45,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AquaPriorContext>();
     db.Database.Migrate();   // aplica las migraciones pendientes (code-first con migraciones)
     DbSeeder.Sembrar(db);
+    if (app.Environment.IsDevelopment())
+        DatosPruebaSeeder.SembrarAsync(db).GetAwaiter().GetResult();
 }
 
 if (!app.Environment.IsDevelopment())
@@ -68,7 +70,9 @@ localizacion.RequestCultureProviders.Clear();
 app.UseRequestLocalization(localizacion);
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+var tiposArchivos = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+tiposArchivos.Mappings[".kml"] = "application/vnd.google-earth.kml+xml";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = tiposArchivos });
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

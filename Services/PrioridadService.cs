@@ -5,14 +5,9 @@ namespace AquaPrior.Services;
 
 public class PrioridadService
 {
-    // Umbrales provisionales: el equipo debe acordarlos y documentarlos antes de las pruebas.
+    // Umbrales legibles en una escala de 0 a 100.
     public const double UmbralAlta = 0.70;
     public const double UmbralMedia = 0.40;
-
-    // Referencias fijas y provisionales, independientes de cuántos distritos reportaron.
-    // Deben calibrarse con datos reales antes de usarlas en decisiones operativas.
-    public const double ReferenciaPersonas = 500;
-    public const double ReferenciaHoras = 24;
 
     private readonly IReporteRepository _reportes;
     private readonly IEnumerable<IPrioridadStrategy> _estrategias;
@@ -31,8 +26,7 @@ public class PrioridadService
         pesoPersonas = Math.Clamp(pesoPersonas, 0, 1);
         var estrategia = _estrategias.FirstOrDefault(e => e.Clave == clave) ?? _estrategias.First();
 
-        // Consolidación: solo reportes verificados y con el corte aún abierto. Los reportes cercanos se
-        // agrupan en incidentes (varios vecinos, un mismo corte) y las personas se suman por incidente, no por reporte.
+        // Se consideran cortes totales abiertos y verificados. Varios reportes cercanos forman un incidente.
         var verificados = (await _reportes.ListarPorEstadoAsync(EstadoReporte.Verificado))
             .Where(r => r.FinCorte is null && r.Tipo == TipoProblema.CorteTotal);
         var incidentes = Incidentes.Agrupar(verificados);
@@ -46,8 +40,8 @@ public class PrioridadService
         }
 
         var aptas = zonas.Where(z => !estrategia.RequierePersonas || z.Personas.HasValue).ToList();
-        double maxP = ReferenciaPersonas;
-        double maxH = ReferenciaHoras;
+        var maxP = Math.Max(1, aptas.Select(z => z.Personas ?? 0).DefaultIfEmpty().Max());
+        var maxH = Math.Max(1, aptas.Select(z => z.Horas).DefaultIfEmpty().Max());
 
         var resultado = new ResultadoPrioridad();
         foreach (var z in aptas)

@@ -26,9 +26,9 @@
     <div class="stats-grid">
         <div class="stat-card"><span class="stat-icon" aria-hidden="true">◇</span><div><span class="stat-label">Zonas con prioridad</span><strong>@zonas.Count</strong><small>Con información suficiente</small></div></div>
         <div class="stat-card"><span class="stat-icon warm" aria-hidden="true">↗</span><div><span class="stat-label">Prioridad alta</span><strong>@zonas.Count(z => z.Nivel == "Alta")</strong><small>Según el cálculo actual</small></div></div>
-        <div class="stat-card"><span class="stat-icon neutral" aria-hidden="true">◷</span><div><span class="stat-label">Reportes por revisar</span><strong>@Model.Pendientes</strong><small>Pendientes de verificación</small></div></div>
+        <div class="stat-card"><span class="stat-icon neutral" aria-hidden="true">◷</span><div><span class="stat-label">Avisos en corroboración</span><strong>@Model.Pendientes</strong><small>Aún no visibles en el mapa público</small></div></div>
     </div>
-    <div class="section-heading" id="zonas"><div><span class="eyebrow">PANORAMA POR DISTRITO</span><h2>Zonas afectadas</h2><p class="hint">La prioridad considera interrupciones totales confirmadas y activas; las otras incidencias se revisan por separado.</p></div><span class="verified-label">● Información verificada</span></div>
+    <div class="section-heading" id="zonas"><div><span class="eyebrow">PANORAMA POR DISTRITO</span><h2>Zonas afectadas</h2><p class="hint">Los avisos aparecen públicamente cuando tres vecinos distintos corroboran un mismo incidente. La prioridad considera cortes totales confirmados y activos.</p></div><span class="verified-label">● Información corroborada</span></div>
     @if (zonas.Any())
     {
         <ul class="list ranking-list">
@@ -46,5 +46,5 @@
     {
         <div class="notice"><b>Información por completar</b><p>No se asignó prioridad por falta de población estimada: @string.Join(", ", Model.Resultado.SinDatos).</p></div>
     }
-    <div class="how-it-works"><div><span>01</span><h3>Reporta</h3><p>Selecciona el tipo de problema, cuándo empezó y su ubicación. Si conoces el alcance, puedes indicarlo.</p></div><div><span>02</span><h3>Se revisa</h3><p>El administrador verifica la información recibida.</p></div><div><span>03</span><h3>Consulta</h3><p>Revisa la prioridad calculada por duración y población estimada.</p></div></div>
+    <div class="how-it-works"><div><span>01</span><h3>Reporta</h3><p>Indica qué ocurre, cuándo empezó y dónde está el problema.</p></div><div><span>02</span><h3>Se corrobora</h3><p>El sistema agrupa avisos cercanos y espera reportes de tres vecinos distintos.</p></div><div><span>03</span><h3>Consulta</h3><p>El incidente corroborado aparece en el mapa y en la prioridad de su distrito.</p></div></div>
 </section>

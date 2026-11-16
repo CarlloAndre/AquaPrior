@@ -16,6 +16,7 @@ public class ZonaDetalleVM
     public Zona Zona { get; set; } = null!;
     public List<ReporteFilaVM> Reportes { get; set; } = new();
     public int Verificados { get; set; }
+    public List<Incidente> Incidentes { get; set; } = new();
 }
 
 public class ColaAdminVM

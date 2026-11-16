@@ -2,7 +2,7 @@ using AquaPrior.Models;
 
 namespace AquaPrior.Services;
 
-/// <summary>Agrupa reportes en incidentes: cercanos en el espacio y con cortes que se solapan en el tiempo.</summary>
+/// <summary>Agrupa reportes en incidentes: mismo tipo y distrito, cercanos en el espacio y con periodos compatibles.</summary>
 public static class Incidentes
 {
     public const double RadioMetros = 120;
@@ -37,6 +37,7 @@ public static class Incidentes
         if (a.Latitud is null || a.Longitud is null || b.Latitud is null || b.Longitud is null) return false;
         if (DistanciaMetros(a.Latitud.Value, a.Longitud.Value, b.Latitud.Value, b.Longitud.Value) > RadioMetros) return false;
         var ahora = DateTime.Now;
+        if (Math.Abs((a.InicioCorte - b.InicioCorte).TotalHours) > 24) return false;
         return a.InicioCorte <= (b.FinCorte ?? ahora) && b.InicioCorte <= (a.FinCorte ?? ahora);
     }
 

@@ -4,7 +4,109 @@
     <h1>Reportar un problema del suministro</h1>
     <p class="lead">Marca dónde ocurre el problema, indica su tipo y describe la situación. El distrito se detecta automáticamente y el administrador podrá revisar el aviso.</p>
     <form class="card" asp-action="Crear" method="post" novalidate>
-        <partial name="_CamposReporte" model="Model" />
+        <div asp-validation-summary="ModelOnly" class="err" role="alert"></div>
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="ReturnUrl" type="hidden" />
+        <label>Dirección exacta
+            <input asp-for="Direccion" maxlength="80" placeholder="Ej. Av. España 123, Trujillo" />
+            <span asp-validation-for="Direccion" class="err"></span>
+        </label>
+        <input asp-for="Latitud" type="hidden" id="Latitud" />
+        <input asp-for="Longitud" type="hidden" id="Longitud" />
+        <fieldset>
+            <legend>Ubicación del problema</legend>
+            <p class="hint">Haz clic en el mapa para ubicar el corte. El mapa encuadra automáticamente los distritos de Trujillo.</p>
+            <div class="map-panel"><div id="mapa-ubicacion" role="region" aria-label="Selecciona la ubicación exacta del reporte en el mapa"></div><p id="estado-ubicacion" class="map-caption" aria-live="polite">Cargando el mapa de distritos…</p></div>
+            <span asp-validation-for="Latitud" class="err"></span>
+            <span asp-validation-for="Longitud" class="err"></span>
+        </fieldset>
+        <label>Tipo de problema
+            <select asp-for="Tipo">
+                <option value="CorteTotal">Interrupción total</option>
+                <option value="BajaPresion">Baja presión</option>
+                <option value="CalidadAgua">Agua turbia, mal olor u otro problema de calidad</option>
+                <option value="Otro">Otro problema del servicio</option>
+            </select>
+            <span asp-validation-for="Tipo" class="err"></span>
+        </label>
+        <label>Motivo del reporte
+            <textarea asp-for="Motivo" rows="4" maxlength="500" placeholder="Describe qué ocurre, por ejemplo: corte total, baja presión o agua turbia."></textarea>
+            <span asp-validation-for="Motivo" class="err"></span>
+        </label>
+        <label>Inicio del problema
+            <input asp-for="InicioCorte" type="datetime-local" />
+            <span asp-validation-for="InicioCorte" class="err"></span>
+        </label>
         <button class="btn" type="submit">Enviar reporte</button>
     </form>
 </section>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+<script>
+(function () {
+    const latInput = document.getElementById('Latitud'), lngInput = document.getElementById('Longitud');
+    const estado = document.getElementById('estado-ubicacion');
+    const latInicial = Number(latInput.value), lngInicial = Number(lngInput.value);
+    const tieneInicial = latInput.value !== '' && lngInput.value !== '';
+    const mapa = L.map('mapa-ubicacion').setView(tieneInicial ? [latInicial, lngInicial] : [-8.08, -79.0], tieneInicial ? 15 : 10);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+    const capaDistritos = omnivore.kml('/mapas/trujillo-distritos.kml').addTo(mapa);
+    let distritosListos = false;
+    function dentro(anillo, lat, lng) {
+        let d = false;
+        for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+            const a = anillo[i], b = anillo[j];
+            if ((a.lat > lat) !== (b.lat > lat) && lng < (b.lng - a.lng) * (lat - a.lat) / (b.lat - a.lat) + a.lng) d = !d;
+        }
+        return d;
+    }
+    function distritoEn(lat, lng) {
+        let nombre = null;
+        function recorrer(capa, nom) {
+            if (nombre) return;
+            nom = (capa.feature && capa.feature.properties && capa.feature.properties.name) || nom;
+            if (capa.getLatLngs) {
+                const g = capa.getLatLngs();
+                const anillos = Array.isArray(g[0]) && Array.isArray(g[0][0]) ? g.map(x => x[0]) : [Array.isArray(g[0]) ? g[0] : g];
+                if (anillos.some(r => dentro(r, lat, lng))) nombre = nom || 'Distrito';
+            } else if (capa.eachLayer) {
+                capa.eachLayer(function (h) { recorrer(h, nom); });
+            }
+        }
+        recorrer(capaDistritos, null);
+        return nombre;
+    }
+    function suavizarLimites(capa) {
+        if (capa.setStyle) capa.setStyle({ color: '#647b80', weight: 1, opacity: 0.45, fillOpacity: 0.02 });
+        if (capa.eachLayer) capa.eachLayer(suavizarLimites);
+    }
+    let marcador = tieneInicial ? L.marker([latInicial, lngInicial]).addTo(mapa) : null;
+    mapa.on('click', function (e) {
+        if (!distritosListos) {
+            estado.textContent = 'Espera a que termine de cargar el mapa de distritos.';
+            return;
+        }
+        latInput.value = e.latlng.lat.toFixed(7); lngInput.value = e.latlng.lng.toFixed(7);
+        if (marcador) marcador.setLatLng(e.latlng); else marcador = L.marker(e.latlng).addTo(mapa);
+        const dist = distritoEn(e.latlng.lat, e.latlng.lng);
+        estado.textContent = dist
+            ? 'Ubicación seleccionada en el distrito de ' + dist + ' (' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + ').'
+            : 'Ese punto está fuera de los distritos de Trujillo. Elige otro.';
+    });
+    capaDistritos.on('ready', function () {
+        distritosListos = true;
+        suavizarLimites(capaDistritos);
+        if (!tieneInicial && this.getBounds().isValid()) mapa.fitBounds(this.getBounds(), { padding: [12, 12] });
+        const distrito = tieneInicial ? distritoEn(latInicial, lngInicial) : null;
+        estado.textContent = distrito
+            ? 'Ubicación guardada en el distrito de ' + distrito + '.'
+            : tieneInicial
+                ? 'La ubicación guardada está fuera de los distritos. Selecciona otro punto.'
+                : 'Haz clic para marcar la ubicación del corte.';
+    });
+    capaDistritos.on('error', function () {
+        estado.textContent = 'No se pudieron cargar los distritos. Recarga la página para volver a intentarlo.';
+    });
+})();
+</script>

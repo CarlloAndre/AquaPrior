@@ -104,20 +104,15 @@ public class ReporteService
         return null;
     }
 
-    // ---- Control automático limitado a detectar reportes repetidos del mismo ciudadano ----
+    // ---- Detección automática de duplicados y corroboración vecinal ----
 
-
-    /// <summary>
-    /// Solo detecta duplicados del mismo ciudadano. Múltiples vecinos aportan corroboración,
-    /// pero NUNCA constituyen verificación oficial por sí solos.
-    /// </summary>
     private async Task AplicarReglasAutomaticasAsync(int reporteId)
     {
         var todos = await _reportes.ListarTodosAsync();
         var r = todos.FirstOrDefault(x => x.Id == reporteId);
         if (r is null || r.Estado != EstadoReporte.Recibido) return;
 
-        var propio = todos.FirstOrDefault(o => o.Id != r.Id && o.UsuarioId == r.UsuarioId && Incidentes.Unibles(o, r));
+        var propio = todos.FirstOrDefault(o => o.Id < r.Id && o.UsuarioId == r.UsuarioId && Incidentes.Unibles(o, r));
         if (propio is not null && propio.Id < r.Id)
         {
             r.Estado = EstadoReporte.Duplicado;
@@ -126,10 +121,21 @@ public class ReporteService
             return;
         }
 
-        // La verificación requiere una acción explícita del administrador.
+        var incidente = Incidentes.De(todos, r)!;
+        const int reportesMinimos = 3;
+        var vecinos = incidente.Reportes.Select(x => x.UsuarioId).Distinct().Count();
+        if (vecinos >= reportesMinimos)
+        {
+            foreach (var reporte in incidente.Reportes.Where(x => x.Estado == EstadoReporte.Recibido))
+            {
+                reporte.Estado = EstadoReporte.Verificado;
+                reporte.MotivoEstado = $"Verificado automáticamente: {vecinos} vecinos distintos reportaron el mismo problema.";
+            }
+            await _reportes.GuardarAsync();
+        }
     }
 
-    /// <summary>El ciudadano confirma su propio suministro; el administrador puede cerrar todos los reportes tras verificar el restablecimiento.</summary>
+    /// <summary>El ciudadano confirma su reporte. Una mayoría de vecinos cierra automáticamente un incidente corroborado.</summary>
     public async Task<string?> ResolverAsync(int id, int usuarioId, bool esAdmin, bool incidente)
     {
         var todos = await _reportes.ListarTodosAsync();
@@ -157,8 +163,24 @@ public class ReporteService
         }
         else
         {
-            // El restablecimiento de una vivienda no significa que todo el sector se recuperó.
             Cerrar(r, null);
+            var incidenteActual = inc;
+            var activos = incidenteActual.Reportes.Where(x => x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado).ToList();
+            const double porcentajeCierreAutomatico = 0.60;
+            var vecinosActivos = activos.Select(x => x.UsuarioId).Distinct().Count();
+            var vecinosRestablecidos = activos.Where(x => x.FinCorte is not null).Select(x => x.UsuarioId).Distinct().Count();
+            if (incidenteActual.Estado == EstadoReporte.Verificado &&
+                vecinosRestablecidos >= 3 &&
+                (double)vecinosRestablecidos / vecinosActivos >= porcentajeCierreAutomatico)
+            {
+                var reportesRestablecidos = activos.Where(x => x.FinCorte is not null).ToList();
+                var finIncidente = reportesRestablecidos.Max(x => x.FinCorte!.Value);
+                foreach (var reporte in activos.Where(x => x.FinCorte is null))
+                {
+                    reporte.FinCorte = finIncidente < reporte.InicioCorte ? reporte.InicioCorte : finIncidente;
+                    reporte.MotivoEstado = "Incidente cerrado automáticamente: al menos el 60 % de los vecinos confirmó el restablecimiento.";
+                }
+            }
         }
         await _reportes.GuardarAsync();
         return null;
@@ -194,8 +216,11 @@ public class ReporteService
             _ => incidentes.Where(Pend)
         };
 
-        double Urgencia(Incidente i) => 0.5 * Math.Clamp((double)i.Personas / PrioridadService.ReferenciaPersonas, 0, 1)
-            + 0.5 * Math.Clamp(i.Horas / PrioridadService.ReferenciaHoras, 0, 1);
+        var abiertos = incidentes.Where(i => i.Abierto).ToList();
+        var maxP = Math.Max(1, abiertos.Select(i => i.Personas).DefaultIfEmpty().Max());
+        var maxH = Math.Max(1, abiertos.Select(i => i.Horas).DefaultIfEmpty().Max());
+        double Urgencia(Incidente i) => 0.5 * Math.Clamp((double)i.Personas / maxP, 0, 1)
+            + 0.5 * Math.Clamp(i.Horas / maxH, 0, 1);
 
         cola.Incidentes = elegidos.OrderByDescending(i => i.Abierto).ThenByDescending(Urgencia).ThenByDescending(i => i.Inicio).ToList();
         return cola;
@@ -266,7 +291,7 @@ public class ReporteService
         return true;
     }
 
-    /// <summary>Los avisos de vecinos distintos son corroboraciones, no duplicados.</summary>
+    /// <summary>Los avisos del mismo vecino dentro de un incidente se marcan como repetidos.</summary>
     public HashSet<int> Duplicados(IReadOnlyCollection<Reporte> lista) =>
         Incidentes.Agrupar(lista)
             .SelectMany(i => i.Reportes.GroupBy(r => r.UsuarioId)
