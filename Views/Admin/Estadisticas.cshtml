@@ -9,7 +9,9 @@
     <p class="lead">Resumen calculado con los reportes registrados.</p>
     <div class="grid2">
         <div class="card"><div class="kpi">@Model.Total</div>reportes registrados</div>
-        <div class="card"><div class="kpi">@Model.PorcentajeVerificados %</div>verificados · duración promedio @Formato.Horas(Model.PromedioHoras)</div>
+        <div class="card"><div class="kpi">@Model.PorcentajeVerificados %</div>reportes verificados · duración media de reportes verificados y cerrados: @Formato.Horas(Model.PromedioHoras)</div>
+        <div class="card"><div class="kpi">@Model.IncidentesActivos</div>incidentes activos</div>
+        <div class="card"><div class="kpi">@Model.IncidentesResueltos</div>incidentes resueltos</div>
     </div>
     <div class="grid2">
         <div class="card">
