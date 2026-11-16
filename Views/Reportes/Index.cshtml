@@ -69,6 +69,13 @@
                     <div class="act">
                         @if (i.Abierto)
                         {
+                            @if (i.Parcial)
+                            {
+                                <form asp-action="Reabrir" method="post" class="inline">
+                                    <input type="hidden" name="id" value="@baseId" /><input type="hidden" name="incidente" value="true" /><input type="hidden" name="returnUrl" value="@retorno" />
+                                    <button type="submit" class="sm">Reabrir reportes cerrados</button>
+                                </form>
+                            }
                             @if (i.Estado == EstadoReporte.Recibido)
                             {
                                 <form asp-action="CambiarEstado" method="post" class="inline">
