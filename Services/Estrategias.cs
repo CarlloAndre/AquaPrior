@@ -7,10 +7,13 @@ public class PrioridadSaw : IPrioridadStrategy
 {
     public string Clave => "saw";
     public string Nombre => "Combinada (SAW: personas y duración)";
-    public bool RequierePersonas => true;
+    // Si no existe población estimada, se prioriza por duración sin inventar un cero.
+    public bool RequierePersonas => false;
 
     public double Calcular(ZonaConsolidada z, double maxPersonas, double maxHoras, double pesoPersonas) =>
-        pesoPersonas * ((z.Personas ?? 0) / maxPersonas) + (1 - pesoPersonas) * (z.Horas / maxHoras);
+        z.Personas.HasValue
+            ? pesoPersonas * Math.Clamp((double)z.Personas.Value / maxPersonas, 0, 1) + (1 - pesoPersonas) * Math.Clamp(z.Horas / maxHoras, 0, 1)
+            : Math.Clamp(z.Horas / maxHoras, 0, 1);
 }
 
 public class PrioridadDuracion : IPrioridadStrategy
@@ -20,7 +23,7 @@ public class PrioridadDuracion : IPrioridadStrategy
     public bool RequierePersonas => false;
 
     public double Calcular(ZonaConsolidada z, double maxPersonas, double maxHoras, double pesoPersonas) =>
-        z.Horas / maxHoras;
+        Math.Clamp(z.Horas / maxHoras, 0, 1);
 }
 
 public class PrioridadPersonas : IPrioridadStrategy
@@ -30,5 +33,5 @@ public class PrioridadPersonas : IPrioridadStrategy
     public bool RequierePersonas => true;
 
     public double Calcular(ZonaConsolidada z, double maxPersonas, double maxHoras, double pesoPersonas) =>
-        (z.Personas ?? 0) / maxPersonas;
+        Math.Clamp((double)(z.Personas ?? 0) / maxPersonas, 0, 1);
 }
