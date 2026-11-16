@@ -1,0 +1,22 @@
+name: Build AquaPrior
+
+on:
+  push:
+    branches: [main, fix/aquaprior-logica-incidentes-20261116]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore AquaPrior.csproj
+      - name: Build
+        run: dotnet build AquaPrior.csproj --configuration Release --no-restore --warnaserror
