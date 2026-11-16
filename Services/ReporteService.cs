@@ -208,9 +208,9 @@ public class ReporteService
         var r = todos.FirstOrDefault(x => x.Id == id);
         if (r is null) return "El reporte no existe.";
         var afectados = incidente ? Incidentes.De(todos, r)?.Reportes ?? new List<Reporte> { r } : new List<Reporte> { r };
-        if (!afectados.Any(x => x.FinCorte is not null && x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado)) return "No hay reportes resueltos para reabrir.";
+        if (!afectados.Any(x => x.FinCorte is not null && (x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado))) return "No hay reportes resueltos para reabrir.";
         foreach (var x in afectados.Where(x => x.FinCorte is not null &&
-                                                  x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado))
+                                                  (x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado)))
         {
             x.FinCorte = null;
             x.MotivoEstado = "Reabierto por el administrador. El suministro requiere nueva comprobación.";
