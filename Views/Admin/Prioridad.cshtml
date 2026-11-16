@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "Priorización de zonas"; }
 <section class="v">
     <h1>Priorización de zonas</h1>
-    <p class="lead">Se consolidan los reportes verificados por distrito. Los pesos y umbrales son provisionales hasta que el equipo los acuerde.</p>
+    <p class="lead">Solo se priorizan interrupciones totales confirmadas que siguen abiertas. Las referencias, pesos y umbrales son provisionales y deben validarse antes de aplicarlos operativamente.</p>
     <form class="ctl" asp-action="Prioridad" method="get">
         <label>Regla de cálculo
             <select name="clave">
@@ -18,7 +18,7 @@
         </label>
         <button class="btn" type="submit">Recalcular</button>
     </form>
-    <p class="hint">Puntaje = peso₁ × (personas ÷ máximo) + peso₂ × (horas ÷ máximo). Alta desde @((int)(PrioridadService.UmbralAlta * 100)), media desde @((int)(PrioridadService.UmbralMedia * 100)).</p>
+    <p class="hint">Puntaje = peso₁ × (personas ÷ 500) + peso₂ × (horas ÷ 24), cada término con máximo 1; sin población estimada se usa solo duración. Referencias provisionales. Alta desde @((int)(PrioridadService.UmbralAlta * 100)), media desde @((int)(PrioridadService.UmbralMedia * 100)).</p>
 
     @if (Model.Resultado.Ranking.Any())
     {
