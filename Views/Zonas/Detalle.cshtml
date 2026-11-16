@@ -28,9 +28,8 @@
                         <b>@r.Direccion</b> <span class="badge">@r.Estado</span>
                         @if (f.EsPosibleDuplicado) { <span class="badge w">Posible duplicado</span> }
                         <div class="mt">
-                            @r.Usuario.Nombre · @Formato.Horas(r.HorasSinServicio) sin servicio ·
-                            @(f.PersonasEnZona is int p ? $"{p} personas en este distrito" : "sin estimado de personas") ·
-                            afecta a @r.Zonas.Count distrito@(r.Zonas.Count == 1 ? "" : "s")
+                            @r.Usuario.Nombre · @Formato.Tipo(r.Tipo) · @Formato.Duracion(r) ·
+                            @(f.PersonasEnZona is int p ? $"{p} personas estimadas" : "sin estimado de personas")
                         </div>
                     </div>
                     <div class="act">
