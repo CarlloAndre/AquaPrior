@@ -36,7 +36,7 @@ public class ZonaService
     public async Task<string?> ActualizarAsync(int id, string nombre)
     {
         nombre = (nombre ?? "").Trim();
-        var z = await _zonas.ObtenerAsync(id);
+        var z = await _zonas.ObtenerConReportesAsync(id);
         if (z is null) return "El distrito no existe.";
         if (z.ReporteZonas.Count > 0 && DistritoLocator.Normalizar(z.Nombre) != DistritoLocator.Normalizar(nombre))
             return "No se puede renombrar un distrito que ya tiene reportes vinculados.";
