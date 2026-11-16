@@ -104,7 +104,7 @@ public class ReporteService
         return null;
     }
 
-    // ---- Reglas automáticas (el administrador solo interviene en lo dudoso) ----
+    // ---- Control automático limitado a detectar reportes repetidos del mismo ciudadano ----
 
 
     /// <summary>
@@ -142,6 +142,8 @@ public class ReporteService
 
         var ahora = DateTime.Now;
         var inc = Incidentes.De(todos, r)!;
+        if (incidente && inc.Estado != EstadoReporte.Verificado)
+            return "Primero confirma el incidente antes de marcarlo como resuelto.";
         void Cerrar(Reporte x, string? motivo)
         {
             if (x.FinCorte is not null) return;
@@ -206,7 +208,7 @@ public class ReporteService
         var r = todos.FirstOrDefault(x => x.Id == id);
         if (r is null) return "El reporte no existe.";
         var afectados = incidente ? Incidentes.De(todos, r)?.Reportes ?? new List<Reporte> { r } : new List<Reporte> { r };
-        if (!afectados.Any(x => x.FinCorte is not null)) return "No hay reportes resueltos para reabrir.";
+        if (!afectados.Any(x => x.FinCorte is not null && x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado)) return "No hay reportes resueltos para reabrir.";
         foreach (var x in afectados.Where(x => x.FinCorte is not null &&
                                                   x.Estado is EstadoReporte.Recibido or EstadoReporte.Verificado))
         {
@@ -264,10 +266,12 @@ public class ReporteService
         return true;
     }
 
-    /// <summary>Ids de reportes que confirman a otro más antiguo del mismo incidente (mismo lugar y mismo corte).</summary>
+    /// <summary>Los avisos de vecinos distintos son corroboraciones, no duplicados.</summary>
     public HashSet<int> Duplicados(IReadOnlyCollection<Reporte> lista) =>
-        Incidentes.Agrupar(lista).Where(i => i.Reportes.Count > 1)
-            .SelectMany(i => i.Reportes.OrderBy(r => r.Id).Skip(1)).Select(r => r.Id).ToHashSet();
+        Incidentes.Agrupar(lista)
+            .SelectMany(i => i.Reportes.GroupBy(r => r.UsuarioId)
+                .SelectMany(g => g.OrderBy(r => r.Id).Skip(1)))
+            .Select(r => r.Id).ToHashSet();
 
     public async Task<Estadisticas> EstadisticasAsync()
     {
