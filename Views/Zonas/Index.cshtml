@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Distritos"; }
 <section class="v">
     <h1>Distritos</h1>
-    <p class="lead">Mantenimiento de los distritos. Abre uno para ver sus reportes (maestro-detalle).</p>
+    <p class="lead">Catálogo de distritos vinculados al mapa. Solo pueden crearse distritos incluidos en la capa geográfica; los avisos se asocian automáticamente al distrito correspondiente.</p>
     <p><a class="btn" asp-action="Crear">Nuevo distrito</a></p>
     @if (Model.Any())
     {
